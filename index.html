@@ -347,7 +347,7 @@ class Abacus{
     const pushingIn=(kind==='h'&&!s.h)||(kind==='e'&&k>=s.e);
     group.forEach(im=>{this.s.tweens.killTweensOf(im);this.busy.add(im);im.setScale(1.05);});
     this.beginGesture();
-    this.drags.set(p.id,{r,kind,k,group,travel,sign,pushingIn,bases:group.map(im=>im.y),y0:p.y,moved:0,crossH:false,crossK:-1,prev:new Set()});
+    this.drags.set(p.id,{touch:!!p.wasTouch,r,kind,k,group,travel,sign,pushingIn,bases:group.map(im=>im.y),y0:p.y,moved:0,crossH:false,crossK:-1,prev:new Set()});
   }
   preview(d,im,on,y){
     if(on){this.busy.add(im);d.prev.add(im);} else {d.prev.delete(im);}
@@ -361,15 +361,17 @@ class Abacus{
     const s=this.state[d.r],b=this.beads[d.r];
     d.moved=clamp((p.y-d.y0)/this.k*d.sign,0,d.travel);
     d.group.forEach((im,i)=>im.y=d.bases[i]+d.moved*d.sign);
-    if(!d.pushingIn) return;
+    // One-pointer pinch shortcut is for MOUSE only (touch uses a real two-finger pinch),
+    // and the pointer must travel deep past the bar so an ordinary push never triggers it.
+    if(!d.pushingIn||d.touch) return;
     const rel=this.localY(p);
     if(d.kind==='e'&&!s.h){ // bottom bead pushed up ACROSS the bar -> bring the top bead down too
-      const want=rel<AB.BEAM_TOP;
+      const want=rel<H_OFF+AB.BH;            // up into the top bead's resting spot
       if(want!==d.crossH){d.crossH=want;this.preview(d,b.h,want,yH(want));}
     }
     if(d.kind==='h'&&s.e<4){ // top bead pulled down ACROSS the bar -> push bottom beads up to the one under the pointer
       let kk=-1;
-      if(rel>AB.BEAM_TOP+AB.BEAM_H) kk=Math.max(s.e,Math.min(3,Math.floor((rel-E_FREE0)/AB.BH)));
+      if(rel>E_FREE0) kk=Math.max(s.e,Math.min(3,Math.floor((rel-E_FREE0)/AB.BH))); // down among the free bottom beads
       if(kk!==d.crossK){d.crossK=kk;
         b.e.forEach((im,i)=>{if(i<s.e)return;const on=kk>=0&&i<=kk;this.preview(d,im,on,yE(i,on));});}
     }
