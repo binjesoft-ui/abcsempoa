@@ -209,7 +209,14 @@ function btn(scene,x,y,w,h,color,label,cb,o={}){
   let pressed=false;
   z.on('pointerdown',()=>{pressed=true;draw(true)});
   z.on('pointerout',()=>{if(pressed){pressed=false;draw(false)}});
-  z.on('pointerup',()=>{if(!pressed)return;pressed=false;draw(false);sfx.click();cb&&cb()});
+  let fired=false;
+  z.on('pointerup',()=>{if(!pressed)return;pressed=false;draw(false);
+    if(o.once){if(fired)return;fired=true;}
+    sfx.click();
+    // Run the action on the next tick, after Phaser has finished handling this tap.
+    // (Actions that destroy this very button mid-tap used to freeze the input system.)
+    if(cb) scene.time.delayedCall(0,()=>{ if(scene.sys.isActive()) cb(); });
+  });
   c.setEnabled=v=>{z.input.enabled=v;c.setAlpha(v?1:.45)};
   c.redraw=()=>draw(false);
   return c;
@@ -259,7 +266,7 @@ function sheet(scene,{kind,emoji,title,body,btnLabel,onBtn}){
   g.fillStyle(col[0],1).fillRoundedRect(-w/2,0,w,h,30);g.lineStyle(4,col[1],1).strokeRoundedRect(-w/2,0,w,h,30);
   const em=txt(scene,-w/2+60,62,emoji,64);
   c.add([g,em,tt,bt]);
-  if(btnLabel){const b=btn(scene,0,h-64,320,78,C.orange,btnLabel,onBtn,{size:32});c.add(b);}
+  if(btnLabel){const b=btn(scene,0,h-64,320,78,C.orange,btnLabel,onBtn,{size:32,once:true});c.add(b);}
   scene.tweens.add({targets:c,y:GH-30-h,duration:380,ease:'Back.Out'});
   c.sheetH=h;
   return c;
@@ -763,7 +770,7 @@ class Challenge extends Phaser.Scene{
       if(last){
         const b=+store.get('sempoaBest','0');if(this.score>b)store.set('sempoaBest',String(this.score));
         this.scene.start('Result',{score:this.score,correct:this.correct,best:this.best,results:this.results});
-      } else {this.ri++;this.load();}
+      } else if(this.answered&&this.ri<this.rounds.length-1){this.ri++;this.load();}
     }});
   }
 }
