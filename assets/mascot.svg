@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 260 340" width="520" height="680">
+  <defs>
+    <linearGradient id="iris" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1b3a8f"/><stop offset=".55" stop-color="#2f7fd8"/><stop offset="1" stop-color="#6fd6ff"/></linearGradient>
+    <linearGradient id="hair" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3b2212"/><stop offset="1" stop-color="#7a4a24"/></linearGradient>
+    <linearGradient id="shirt" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3ab7ee"/><stop offset="1" stop-color="#1f8fd0"/></linearGradient>
+  </defs>
+  <ellipse cx="130" cy="330" rx="78" ry="9" fill="#000" opacity=".15"/>
+  <!-- legs & shoes -->
+  <rect x="100" y="282" width="26" height="40" rx="9" fill="#2f4f8f" stroke="#3a2416" stroke-width="2.5" stroke-linejoin="round"/>
+  <rect x="134" y="282" width="26" height="40" rx="9" fill="#2f4f8f" stroke="#3a2416" stroke-width="2.5" stroke-linejoin="round"/>
+  <path d="M88 330 Q88 314 112 316 Q126 318 126 330 Z" fill="#e53935" stroke="#3a2416" stroke-width="2.5" stroke-linejoin="round"/>
+  <path d="M134 330 Q134 318 148 316 Q172 314 172 330 Z" fill="#e53935" stroke="#3a2416" stroke-width="2.5" stroke-linejoin="round"/>
+  <!-- back hair -->
+  <path d="M48 112 Q40 30 130 22 Q220 30 212 112 Q206 150 190 160 L70 160 Q54 150 48 112 Z" fill="url(#hair)" stroke="#3a2416" stroke-width="2.5" stroke-linejoin="round"/>
+  <!-- body -->
+  <path d="M78 290 Q72 205 130 196 Q188 205 182 290 Z" fill="url(#shirt)" stroke="#3a2416" stroke-width="2.5" stroke-linejoin="round"/>
+  <path d="M106 198 L130 222 L154 198 Q130 206 106 198 Z" fill="#fff" stroke="#3a2416" stroke-width="2.5" stroke-linejoin="round"/>
+  <path d="M122 214 L130 232 L138 214 Z" fill="#e53935" stroke="#3a2416" stroke-width="1.5"/>
+  <!-- neck -->
+  <rect x="118" y="180" width="24" height="22" fill="#f7c9a8" stroke="#3a2416" stroke-width="2.5" stroke-linejoin="round"/>
+  <!-- face -->
+  <path d="M60 104 Q60 182 130 190 Q200 182 200 104 Q200 50 130 48 Q60 50 60 104 Z" fill="#ffe3cc" stroke="#3a2416" stroke-width="2.5" stroke-linejoin="round"/>
+  <ellipse cx="60" cy="122" rx="9" ry="13" fill="#ffe3cc" stroke="#3a2416" stroke-width="2.5" stroke-linejoin="round"/><ellipse cx="200" cy="122" rx="9" ry="13" fill="#ffe3cc" stroke="#3a2416" stroke-width="2.5" stroke-linejoin="round"/>
+  <!-- bangs (spiky anime hair) -->
+  <path d="M52 112 Q50 40 130 30 Q212 36 208 112 L198 84 L190 104 L182 72 L170 98 L160 64 L146 92 L134 60 L120 94 L106 62 L96 98 L84 70 L76 104 L66 82 Z" fill="url(#hair)" stroke="#3a2416" stroke-width="2.5" stroke-linejoin="round"/>
+  <path d="M120 20 Q132 4 150 10 Q136 14 134 30 Z" fill="url(#hair)" stroke="#3a2416" stroke-width="2.5" stroke-linejoin="round"/>
+  <path d="M78 54 Q120 34 176 50" stroke="#fff" stroke-width="5" fill="none" opacity=".35" stroke-linecap="round"/>
+  <path d="M92 60 Q120 48 150 54" stroke="#fff" stroke-width="3" fill="none" opacity=".25" stroke-linecap="round"/>
+  
+    <ellipse cx="100" cy="122" rx="17" ry="22" fill="#fff" stroke="#3a2416" stroke-width="2.5" stroke-linejoin="round"/>
+    <ellipse cx="101" cy="125" rx="13.5" ry="18.5" fill="url(#iris)"/>
+    <ellipse cx="101" cy="127" rx="6.5" ry="9" fill="#10204f"/>
+    <circle cx="95" cy="115" r="5.5" fill="#fff"/>
+    <circle cx="105" cy="134" r="2.6" fill="#fff"/>
+    <path d="M91 139 Q100 144 109 139" stroke="#9fe3ff" stroke-width="2" fill="none" opacity=".8"/>
+    <path d="M81 109 Q100 95 119 109" stroke="#2b1a10" stroke-width="5" fill="none" stroke-linecap="round"/>
+    <path d="M81 109 l-6 -3" stroke="#2b1a10" stroke-width="4" stroke-linecap="round"/>
+    <ellipse cx="160" cy="122" rx="17" ry="22" fill="#fff" stroke="#3a2416" stroke-width="2.5" stroke-linejoin="round"/>
+    <ellipse cx="159" cy="125" rx="13.5" ry="18.5" fill="url(#iris)"/>
+    <ellipse cx="159" cy="127" rx="6.5" ry="9" fill="#10204f"/>
+    <circle cx="155" cy="115" r="5.5" fill="#fff"/>
+    <circle cx="165" cy="134" r="2.6" fill="#fff"/>
+    <path d="M151 139 Q160 144 169 139" stroke="#9fe3ff" stroke-width="2" fill="none" opacity=".8"/>
+    <path d="M141 109 Q160 95 179 109" stroke="#2b1a10" stroke-width="5" fill="none" stroke-linecap="round"/>
+    <path d="M179 109 l6 -3" stroke="#2b1a10" stroke-width="4" stroke-linecap="round"/>
+  <!-- blush -->
+  <ellipse cx="82" cy="152" rx="13" ry="7" fill="#ff8fa3" opacity=".55"/><ellipse cx="178" cy="152" rx="13" ry="7" fill="#ff8fa3" opacity=".55"/>
+  <path d="M76 154 l4 -6 M82 155 l4 -6 M88 155 l4 -6" stroke="#ff5c7a" stroke-width="1.6" opacity=".7"/>
+  <path d="M168 155 l4 -6 M174 155 l4 -6 M180 154 l4 -6" stroke="#ff5c7a" stroke-width="1.6" opacity=".7"/>
+  <!-- nose & mouth -->
+  <path d="M129 146 l2 4" stroke="#d9967a" stroke-width="2" stroke-linecap="round"/>
+  <path d="M116 160 Q130 178 144 160 Z" fill="#b71c1c" stroke="#3a2416" stroke-width="2.5" stroke-linejoin="round"/>
+  <path d="M122 168 Q130 174 138 168 Q130 164 122 168 Z" fill="#ff7a8a"/>
+  <!-- arms -->
+  <path d="M84 222 Q54 238 60 270" stroke="url(#shirt)" stroke-width="24" fill="none" stroke-linecap="round"/>
+  <path d="M176 222 Q206 238 200 270" stroke="url(#shirt)" stroke-width="24" fill="none" stroke-linecap="round"/>
+  <!-- sempoa -->
+  <g transform="rotate(-4 130 262)">
+    <rect x="48" y="214" width="164" height="98" rx="11" fill="#6e3d1a" stroke="#3a2416" stroke-width="2.5" stroke-linejoin="round"/>
+    <rect x="48" y="212" width="164" height="96" rx="11" fill="#9a5b2e" stroke="#3a2416" stroke-width="2.5" stroke-linejoin="round"/>
+    <rect x="58" y="222" width="144" height="80" rx="5" fill="#fff4dc"/>
+    <line x1="78" y1="226" x2="78" y2="300" stroke="#9c9c9c" stroke-width="3"/><ellipse cx="78" cy="233" rx="11" ry="4.6" fill="#ff4d6d" stroke="#3a2416" stroke-width="1"/><ellipse cx="78" cy="255" rx="11" ry="4.3" fill="#ff4d6d" stroke="#3a2416" stroke-width="1"/><ellipse cx="78" cy="279" rx="11" ry="4.3" fill="#ff4d6d" stroke="#3a2416" stroke-width="1"/><ellipse cx="78" cy="287.5" rx="11" ry="4.3" fill="#ff4d6d" stroke="#3a2416" stroke-width="1"/><ellipse cx="78" cy="296" rx="11" ry="4.3" fill="#ff4d6d" stroke="#3a2416" stroke-width="1"/><line x1="104" y1="226" x2="104" y2="300" stroke="#9c9c9c" stroke-width="3"/><ellipse cx="104" cy="233" rx="11" ry="4.6" fill="#ffd23f" stroke="#3a2416" stroke-width="1"/><ellipse cx="104" cy="255" rx="11" ry="4.3" fill="#ffd23f" stroke="#3a2416" stroke-width="1"/><ellipse cx="104" cy="263.5" rx="11" ry="4.3" fill="#ffd23f" stroke="#3a2416" stroke-width="1"/><ellipse cx="104" cy="287.5" rx="11" ry="4.3" fill="#ffd23f" stroke="#3a2416" stroke-width="1"/><ellipse cx="104" cy="296" rx="11" ry="4.3" fill="#ffd23f" stroke="#3a2416" stroke-width="1"/><line x1="130" y1="226" x2="130" y2="300" stroke="#9c9c9c" stroke-width="3"/><ellipse cx="130" cy="233" rx="11" ry="4.6" fill="#2ec27e" stroke="#3a2416" stroke-width="1"/><ellipse cx="130" cy="255" rx="11" ry="4.3" fill="#2ec27e" stroke="#3a2416" stroke-width="1"/><ellipse cx="130" cy="263.5" rx="11" ry="4.3" fill="#2ec27e" stroke="#3a2416" stroke-width="1"/><ellipse cx="130" cy="272" rx="11" ry="4.3" fill="#2ec27e" stroke="#3a2416" stroke-width="1"/><ellipse cx="130" cy="296" rx="11" ry="4.3" fill="#2ec27e" stroke="#3a2416" stroke-width="1"/><line x1="156" y1="226" x2="156" y2="300" stroke="#9c9c9c" stroke-width="3"/><ellipse cx="156" cy="240" rx="11" ry="4.6" fill="#4fa3f7" stroke="#3a2416" stroke-width="1"/><ellipse cx="156" cy="255" rx="11" ry="4.3" fill="#4fa3f7" stroke="#3a2416" stroke-width="1"/><ellipse cx="156" cy="279" rx="11" ry="4.3" fill="#4fa3f7" stroke="#3a2416" stroke-width="1"/><ellipse cx="156" cy="287.5" rx="11" ry="4.3" fill="#4fa3f7" stroke="#3a2416" stroke-width="1"/><ellipse cx="156" cy="296" rx="11" ry="4.3" fill="#4fa3f7" stroke="#3a2416" stroke-width="1"/><line x1="182" y1="226" x2="182" y2="300" stroke="#9c9c9c" stroke-width="3"/><ellipse cx="182" cy="240" rx="11" ry="4.6" fill="#b36bd6" stroke="#3a2416" stroke-width="1"/><ellipse cx="182" cy="255" rx="11" ry="4.3" fill="#b36bd6" stroke="#3a2416" stroke-width="1"/><ellipse cx="182" cy="263.5" rx="11" ry="4.3" fill="#b36bd6" stroke="#3a2416" stroke-width="1"/><ellipse cx="182" cy="272" rx="11" ry="4.3" fill="#b36bd6" stroke="#3a2416" stroke-width="1"/><ellipse cx="182" cy="296" rx="11" ry="4.3" fill="#b36bd6" stroke="#3a2416" stroke-width="1"/>
+    <rect x="58" y="244" width="144" height="6" fill="#6e3d1a"/>
+  </g>
+  <!-- hands -->
+  <ellipse cx="56" cy="270" rx="13" ry="14" fill="#ffe3cc" stroke="#3a2416" stroke-width="2.5" stroke-linejoin="round"/><ellipse cx="204" cy="268" rx="13" ry="14" fill="#ffe3cc" stroke="#3a2416" stroke-width="2.5" stroke-linejoin="round"/>
+  <!-- sparkles -->
+  <path d="M232 46 l5 12 12 5 -12 5 -5 12 -5 -12 -12 -5 12 -5z" fill="#ffd23f" stroke="#fff" stroke-width="1.5"/>
+  <path d="M26 176 l3 8 8 3 -8 3 -3 8 -3 -8 -8 -3 8 -3z" fill="#4fc3f7"/>
+  <path d="M222 190 l2.5 6 6 2.5 -6 2.5 -2.5 6 -2.5 -6 -6 -2.5 6 -2.5z" fill="#ff8fa3"/>
+</svg>

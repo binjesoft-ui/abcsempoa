@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>ABC Sempoa</title>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Nunito:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
+  html,body{margin:0;padding:0;height:100%;background:#ffd59a;overflow:hidden;touch-action:none;
+    -webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+  #game{position:fixed;inset:0}
+  #loading{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;font:800 28px 'Baloo 2',sans-serif;color:#2f7f93}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/phaser@3.70.0/dist/phaser.min.js"
+  onerror="var s=document.createElement('script');s.src='https://unpkg.com/phaser@3.70.0/dist/phaser.min.js';document.head.appendChild(s);"></script>
+</head>
+<body>
+<div id="loading">🧮 Loading…</div>
+<div id="game"></div>
+<script>
+function SEMPOA(){
+'use strict';
+// =====================================================================
+//  ABC Sempoa (Aku Bisa Calistung)  — Phaser 3, portrait 720 x 1280
+// =====================================================================
+const GW=720, GH=1280;
+const FONT="'Baloo 2', 'Nunito', Arial, sans-serif";
+const BODY="'Nunito', Arial, sans-serif";
+const C={teal:0x2f7f93,sky:0x4cc3e8,skyD:0x2a9fc4,orange:0xff6a1a,green:0x2ec27e,red:0xff4d6d,yellow:0xffd23f,
+  purple:0xb36bd6,blue:0x4fa3f7,paper:0xfffdf7,line:0xe8eef2,wood:0xb36b38,woodD:0x6e3d1a,ink:0x24323d};
+const rnd=(a,b)=>a+Math.floor(Math.random()*(b-a+1));
+const pickOne=a=>a[rnd(0,a.length-1)];
+const shuffle=a=>{for(let i=a.length-1;i>0;i--){const j=rnd(0,i);[a[i],a[j]]=[a[j],a[i]]}return a};
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const store={get(k,d){try{const v=localStorage.getItem(k);return v===null?d:v}catch(e){return d}},set(k,v){try{localStorage.setItem(k,v)}catch(e){}}};
+
+// ---------------------------------------------------------------- sound
+let actx=null, muted=store.get('sempoaMute','0')==='1';
+function tone(f,d,type='triangle',delay=0,vol=.14){ if(muted) return;
+  try{actx=actx||new (window.AudioContext||window.webkitAudioContext)();
+    const o=actx.createOscillator(),g=actx.createGain(),t=actx.currentTime+delay;
+    o.type=type;o.frequency.setValueAtTime(f,t);g.gain.setValueAtTime(vol,t);g.gain.exponentialRampToValueAtTime(.001,t+d);
+    o.connect(g);g.connect(actx.destination);o.start(t);o.stop(t+d);}catch(e){} }
+const sfx={
+  clack:()=>{tone(1200,.04,'square',0,.05);tone(500,.06,'triangle',.01,.08)},
+  click:()=>tone(660,.08),
+  good:()=>{tone(523,.12);tone(659,.12,'triangle',.1);tone(784,.2,'triangle',.2)},
+  bad:()=>{tone(220,.2,'sawtooth',0,.08);tone(160,.3,'sawtooth',.15,.08)},
+  pinch:()=>{tone(880,.1,'sine',0,.1);tone(1320,.15,'sine',.06,.1)},
+  star:k=>tone(700+k*200,.2),
+  win:()=>[523,659,784,1047,784,1047].forEach((f,i)=>tone(f,.18,'triangle',i*.12))
+};
+
+// ---------------------------------------------------------------- language
+let LANG=store.get('sempoaLang','id');
+const EN_ONES=['zero','one','two','three','four','five','six','seven','eight','nine','ten','eleven','twelve','thirteen','fourteen','fifteen','sixteen','seventeen','eighteen','nineteen'];
+const EN_TENS=['','','twenty','thirty','forty','fifty','sixty','seventy','eighty','ninety'];
+function enWords(n){
+  if(n<20) return EN_ONES[n];
+  if(n<100) return EN_TENS[Math.floor(n/10)]+(n%10?'-'+EN_ONES[n%10]:'');
+  if(n<1000) return EN_ONES[Math.floor(n/100)]+' hundred'+(n%100?' and '+enWords(n%100):'');
+  return enWords(Math.floor(n/1000))+' thousand'+(n%1000?(n%1000<100?' and ':' ')+enWords(n%1000):'');
+}
+const ID_S=['nol','satu','dua','tiga','empat','lima','enam','tujuh','delapan','sembilan','sepuluh','sebelas'];
+function idWords(n){
+  if(n<12) return ID_S[n];
+  if(n<20) return ID_S[n-10]+' belas';
+  if(n<100) return ID_S[Math.floor(n/10)]+' puluh'+(n%10?' '+ID_S[n%10]:'');
+  if(n<200) return 'seratus'+(n%100?' '+idWords(n%100):'');
+  if(n<1000) return ID_S[Math.floor(n/100)]+' ratus'+(n%100?' '+idWords(n%100):'');
+  if(n<2000) return 'seribu'+(n%1000?' '+idWords(n%1000):'');
+  return idWords(Math.floor(n/1000))+' ribu'+(n%1000?' '+idWords(n%1000):'');
+}
+
+const I18N={
+ en:{
+  name:'ABC Sempoa', tagline:'Push and pinch the beads, learn your numbers,\nand become an Abacus Master!',
+  learn:'Learn', learnSub:'10 short lessons with Ollie the Owl',
+  play:'Challenge', playSub:'10 rounds: build, read, add & take away',
+  free:'Free Play', freeSub:'Slide the beads and see the number',
+  best:n=>`🏆 Best Challenge score: ${n}`, lesson:(i,n)=>`Lesson ${i}/${n}`,
+  reset:'↺ Reset', showMe:'👀 Show me', next:'Next ➜', finish:'Finish 🏅', check:'Check ✓', clear:'↺ Clear',
+  round:i=>`Round ${i}/10`,
+  types:{build:'🧱 Build It',read:'👀 Read It',add:'➕ Add It',sub:'➖ Take Away'},
+  instrBuild:n=>`Show this number on the abacus:\n${n}`, instrRead:'What number is on the abacus? 🤔',
+  instrAdd:(a,b)=>`The abacus shows ${a}.\nAdd +${b} and show the answer!`,
+  instrSub:(a,b)=>`The abacus shows ${a}.\nTake away −${b} and show the answer!`,
+  places:['Ones','Tens','Hundreds','Thousands'],
+  hint:'👆 Push to the bar · 👇 Pull away · 🤏 6–9: pinch together',
+  praise:['Awesome! 🎉','Bead-tastic! 🧮','Nailed it! 🎯','Super star! 🌟','Abacus pro! 🚀'],
+  cheer:['So close! 💪','Nice try! 🙂',"Let's learn it! 📘"],
+  answerIs:n=>`The answer is ${n}.`,
+  wrongMoveT:'Right number, wrong move! 🙈',
+  wrongMoveB:r=>`You moved the beads one by one on the ${r} rod. Pinch the top and bottom beads together in one move. Let's try again!`,
+  noPinchT:'Right number, but no pinch! 🤏',
+  noPinchB:r=>`You moved the top and bottom beads one by one on the ${r} rod. Pinch them together in one move!`,
+  and:' and ', pinch:'🤏 Pinch!', wellDone:['Well done! 🎉','You got it! 🌟','Super! 🚀','Hooray! 🥳'],
+  freeInstr:'Push and pull the beads and\nwatch the number change!', surprise:'🎲 Surprise me',
+  remember:'💡 Remember', rememberB:'Beads count only when they touch the middle bar. The top bead = 5, each bottom bead = 1. Each rod to the left is worth 10 times more!',
+  results:'Challenge Results', correct:'Correct', points:'Points', streak:'Best streak',
+  playAgain:'Play Again 🔁', home:'🏠 Home',
+  endTitles:['Keep Practising!','Good Effort!','Great Job!','Abacus Champion! 👑'],
+  endMsgs:['Try the lessons, then come back! 📚',"You're getting there. Play again for more stars!",'Just a little more to a perfect score! 💪','Your fingers are lightning fast! ⚡'],
+  perfect:'PERFECT! 💯', noPinchR:'❌ no pinch', youSaid:n=>`❌ you: ${n}`,
+  certT:'Lessons Complete!', certB:'You can show every number up to 999 on the abacus. Ollie is proud of you! 🦉', tryChallenge:'Try the Challenge 🎮',
+  digit:d=>d===0?'no beads':d<5?`${d} bottom bead${d>1?'s':''}`:d===5?'the top bead':`top bead + ${d-5} bottom bead${d>6?'s':''} (pinch!)`,
+  words:enWords, langName:'English'
+ },
+ id:{
+  name:'ABC Sempoa', tagline:'Dorong dan jepit manik-maniknya, kenali angka,\ndan jadilah Jagoan Sempoa!',
+  learn:'Belajar', learnSub:'10 pelajaran singkat bersama Ollie si Burung Hantu',
+  play:'Tantangan', playSub:'10 ronde: susun, baca, tambah & kurang',
+  free:'Main Bebas', freeSub:'Geser manik dan lihat angkanya',
+  best:n=>`🏆 Skor Tantangan terbaik: ${n}`, lesson:(i,n)=>`Pelajaran ${i}/${n}`,
+  reset:'↺ Ulangi', showMe:'👀 Contohkan', next:'Lanjut ➜', finish:'Selesai 🏅', check:'Periksa ✓', clear:'↺ Hapus',
+  round:i=>`Ronde ${i}/10`,
+  types:{build:'🧱 Susun Angka',read:'👀 Baca Angka',add:'➕ Tambah',sub:'➖ Kurang'},
+  instrBuild:n=>`Tunjukkan angka ini di sempoa:\n${n}`, instrRead:'Angka berapa di sempoa? 🤔',
+  instrAdd:(a,b)=>`Sempoa menunjukkan ${a}.\nTambah +${b}, lalu tunjukkan hasilnya!`,
+  instrSub:(a,b)=>`Sempoa menunjukkan ${a}.\nKurangi −${b}, lalu tunjukkan hasilnya!`,
+  places:['Satuan','Puluhan','Ratusan','Ribuan'],
+  hint:'👆 Dorong ke palang · 👇 Tarik menjauh · 🤏 6–9: jepit bersamaan',
+  praise:['Hebat! 🎉','Keren! 😎','Tepat sekali! 🎯','Bintang sempoa! 🌟','Mantap! 🚀'],
+  cheer:['Hampir! 💪','Ayo coba lagi! 🙂','Kita belajar, yuk! 📘'],
+  answerIs:n=>`Jawabannya ${n}.`,
+  wrongMoveT:'Angkanya benar, gerakannya salah! 🙈',
+  wrongMoveB:r=>`Kamu menggerakkan manik satu per satu di tiang ${r}. Jepit manik atas dan bawah bersamaan dalam satu gerakan. Coba lagi, ya!`,
+  noPinchT:'Angka benar, tapi tidak dijepit! 🤏',
+  noPinchB:r=>`Kamu menggerakkan manik atas dan bawah satu per satu di tiang ${r}. Jepit bersamaan dalam satu gerakan!`,
+  and:' dan ', pinch:'🤏 Jepit!', wellDone:['Bagus sekali! 🎉','Kamu berhasil! 🌟','Super! 🚀','Hore! 🥳'],
+  freeInstr:'Dorong dan tarik manik,\nlihat angkanya berubah!', surprise:'🎲 Kejutan!',
+  remember:'💡 Ingat', rememberB:'Manik hanya dihitung jika menyentuh palang tengah. Manik atas = 5, tiap manik bawah = 1. Setiap tiang ke kiri nilainya 10 kali lebih besar!',
+  results:'Hasil Tantangan', correct:'Benar', points:'Poin', streak:'Beruntun',
+  playAgain:'Main Lagi 🔁', home:'🏠 Beranda',
+  endTitles:['Ayo Berlatih Lagi!','Usaha yang Bagus!','Hebat Sekali!','Juara Sempoa! 👑'],
+  endMsgs:['Coba pelajarannya dulu, lalu kembali lagi! 📚','Kamu makin pintar. Main lagi untuk bintang lebih banyak!','Sedikit lagi menuju sempurna! 💪','Jarimu secepat kilat! ⚡'],
+  perfect:'SEMPURNA! 💯', noPinchR:'❌ tidak dijepit', youSaid:n=>`❌ kamu: ${n}`,
+  certT:'Pelajaran Selesai!', certB:'Kamu sudah bisa menunjukkan semua angka sampai 999 di sempoa. Ollie bangga padamu! 🦉', tryChallenge:'Coba Tantangan 🎮',
+  digit:d=>d===0?'tanpa manik':d<5?`${d} manik bawah`:d===5?'manik atas':`manik atas + ${d-5} manik bawah (jepit!)`,
+  words:idWords, langName:'Bahasa Indonesia'
+ }
+};
+const L=()=>I18N[LANG];
+
+// ---------------------------------------------------------------- lessons
+const LESSONS=[
+ {rods:1,target:1,
+  t:{en:'Meet the Abacus!',id:'Kenalan dengan Sempoa!'},
+  x:{en:'Beads only count when they touch the middle bar. Each bottom bead is worth 1.',id:'Manik hanya dihitung jika menyentuh palang tengah. Setiap manik bawah bernilai 1.'},
+  task:{en:'👉 Push the top bottom-bead UP to the bar. Make 1!',id:'👉 Dorong manik bawah paling atas ke palang. Buat angka 1!'}},
+ {rods:1,target:3,
+  t:{en:'Counting with Bottom Beads',id:'Berhitung dengan Manik Bawah'},
+  x:{en:'Push more beads up to count. A lower bead pushes the beads above it too! Pull a bead down to take it away.',id:'Dorong lebih banyak manik untuk berhitung. Manik di bawah ikut mendorong manik di atasnya! Tarik ke bawah untuk mengurangi.'},
+  task:{en:'👉 Make 3.',id:'👉 Buat angka 3.'}},
+ {rods:1,target:5,
+  t:{en:'The Top Bead',id:'Manik Atas'},
+  x:{en:'The bead above the bar is worth 5 all by itself! Pull it DOWN to the bar.',id:'Manik di atas palang bernilai 5 sendirian! Tarik ke BAWAH sampai menyentuh palang.'},
+  task:{en:'👉 Make 5 with only the top bead.',id:'👉 Buat angka 5 dengan manik atas saja.'}},
+ {rods:1,target:6,pinch:true,
+  t:{en:'The Pinch 🤏',id:'Jepit 🤏'},
+  x:{en:'6 to 9 use the top bead AND bottom beads, moved at the SAME time like a pinch!\n📱 Two fingers: pull the top bead down and push a bottom bead up together.\n🖱️ Mouse: drag the top bead down ACROSS the bar onto the bottom bead you want.',
+     id:'6 sampai 9 memakai manik atas DAN manik bawah yang digerakkan BERSAMAAN, seperti menjepit!\n📱 Dua jari: tarik manik atas ke bawah dan dorong manik bawah ke atas bersamaan.\n🖱️ Mouse: seret manik atas ke bawah MELEWATI palang sampai ke manik bawah yang kamu mau.'},
+  task:{en:"👉 Make 6 in ONE pinch. One by one doesn't count!",id:'👉 Buat 6 dengan SATU jepitan. Satu per satu tidak dihitung!'}},
+ {rods:1,target:8,pinch:true,
+  t:{en:'Pinch Some More',id:'Jepit Lagi'},
+  x:{en:'8 = 5 + 3. Pinch the top bead and 3 bottom beads together in one move.',id:'8 = 5 + 3. Jepit manik atas dan 3 manik bawah sekaligus dalam satu gerakan.'},
+  task:{en:'👉 Make 8 with one pinch.',id:'👉 Buat 8 dengan satu jepitan.'}},
+ {rods:1,target:9,pinch:true,
+  t:{en:'Biggest on One Rod',id:'Terbesar di Satu Tiang'},
+  x:{en:'All the beads: 5 + 4 = 9. That is the biggest number one rod can show!',id:'Semua manik: 5 + 4 = 9. Itu angka terbesar di satu tiang!'},
+  task:{en:'👉 Make 9 with one pinch.',id:'👉 Buat 9 dengan satu jepitan.'}},
+ {rods:2,target:30,glow:[1],
+  t:{en:'The Tens Rod',id:'Tiang Puluhan'},
+  x:{en:'The left rod is the Tens. Each bottom bead there is worth 10 and its top bead is worth 50!',id:'Tiang kiri adalah Puluhan. Tiap manik bawah di sana bernilai 10 dan manik atasnya bernilai 50!'},
+  task:{en:'👉 Make 30.',id:'👉 Buat angka 30.'}},
+ {rods:2,target:64,pinch:true,
+  t:{en:'Tens and Ones',id:'Puluhan dan Satuan'},
+  x:{en:'For 64: pinch 6 on the Tens rod (top bead + 1 together), then push 4 on the Ones rod.',id:'Untuk 64: jepit 6 di tiang Puluhan (manik atas + 1 bersamaan), lalu dorong 4 di tiang Satuan.'},
+  task:{en:'👉 Make 64.',id:'👉 Buat angka 64.'}},
+ {rods:2,target:17,start:12,glow:[0],
+  t:{en:'Adding on the Abacus',id:'Menjumlah dengan Sempoa'},
+  x:{en:'The abacus shows 12. To add 5, just pull the top bead on the Ones rod down!',id:'Sempoa menunjukkan 12. Untuk menambah 5, tarik saja manik atas di tiang Satuan ke bawah!'},
+  task:{en:'👉 Add 5 to make 17.',id:'👉 Tambah 5 menjadi 17.'}},
+ {rods:3,target:999,pinch:true,
+  t:{en:'Hundreds Hero',id:'Jagoan Ratusan'},
+  x:{en:'Three rods: Hundreds, Tens and Ones. Pinch every rod full to show the biggest 3-digit number!',id:'Tiga tiang: Ratusan, Puluhan, dan Satuan. Jepit setiap tiang sampai penuh!'},
+  task:{en:'👉 Make 999 (one pinch per rod).',id:'👉 Buat 999 (satu jepitan per tiang).'}},
+];
+
+// ---------------------------------------------------------------- UI helpers
+function txt(scene,x,y,s,size,color='#24323d',o={}){
+  return scene.add.text(x,y,s,{fontFamily:o.body?BODY:FONT,fontSize:size+'px',color,fontStyle:o.weight||'800',
+    align:o.align||'center',wordWrap:o.wrap?{width:o.wrap,useAdvancedWrap:true}:undefined,lineSpacing:o.ls??2,
+    stroke:o.stroke,strokeThickness:o.stroke?(o.st||6):0}).setOrigin(o.ox??0.5,o.oy??0.5).setPadding(4,6,4,6);
+}
+function btn(scene,x,y,w,h,color,label,cb,o={}){
+  const c=scene.add.container(x,y);
+  const g=scene.add.graphics();
+  const dark=Phaser.Display.Color.ValueToColor(color).darken(o.white?6:20).color;
+  const r=o.radius??Math.min(h/2,34);
+  const t=txt(scene,0,0,label,o.size||30,o.textColor||'#ffffff');
+  const draw=pr=>{g.clear();
+    g.fillStyle(o.white?0xdfe7ec:dark,1).fillRoundedRect(-w/2,-h/2+8,w,h,r);
+    g.fillStyle(color,1).fillRoundedRect(-w/2,-h/2+(pr?6:0),w,h,r);
+    if(o.white) g.lineStyle(3,0xe1e8ed,1).strokeRoundedRect(-w/2,-h/2+(pr?6:0),w,h,r);
+    t.y=pr?6:0; if(c.extra) c.extra.forEach(e=>e.y=e.baseY+(pr?6:0));};
+  const z=scene.add.zone(0,4,w,h+8).setInteractive({useHandCursor:true});
+  c.add([g,t,z]); c.label=t; c.extra=[]; draw(false);
+  let pressed=false;
+  z.on('pointerdown',()=>{pressed=true;draw(true)});
+  z.on('pointerout',()=>{if(pressed){pressed=false;draw(false)}});
+  z.on('pointerup',()=>{if(!pressed)return;pressed=false;draw(false);sfx.click();cb&&cb()});
+  c.setEnabled=v=>{z.input.enabled=v;c.setAlpha(v?1:.45)};
+  c.redraw=()=>draw(false);
+  return c;
+}
+function panel(scene,x,y,w,h,fill=0xf3fbfe,stroke=null,r=28){
+  const g=scene.add.graphics();
+  g.fillStyle(fill,1).fillRoundedRect(x,y,w,h,r);
+  if(stroke!==null) g.lineStyle(3,stroke,1).strokeRoundedRect(x,y,w,h,r);
+  return g;
+}
+function drawBg(scene){
+  scene.cameras.main.setBackgroundColor('#ffd59a');
+  const g=scene.add.graphics();
+  // floating bubbles
+  for(let i=0;i<9;i++){const b=scene.add.circle(rnd(0,GW),rnd(0,GH),rnd(14,46),0xffffff,.28);
+    scene.tweens.add({targets:b,y:'-=1400',duration:rnd(14000,24000),repeat:-1,onRepeat:()=>{b.y=GH+60;b.x=rnd(0,GW)}});}
+  g.fillStyle(0xd99a52,1).fillRoundedRect(16,24,GW-32,GH-36,40);
+  g.fillStyle(C.paper,1).fillRoundedRect(16,16,GW-32,GH-36,40);
+  // notebook spine on top
+  g.fillStyle(C.teal,1).fillRoundedRect(16,16,GW-32,52,{tl:40,tr:40,bl:0,br:0});
+  g.fillStyle(C.yellow,1).fillRect(16,68,GW-32,10);
+  for(let x=60;x<GW-40;x+=52){g.lineStyle(5,0x555555,1).strokeEllipse(x,40,14,30);}
+}
+function topBar(scene,title,o={}){
+  const y=118;
+  if(o.home!==false) btn(scene,82,y,110,62,0xffffff,'🏠',()=>scene.scene.start('Home'),{white:true,size:30,textColor:'#24323d'});
+  if(title) txt(scene,GW/2,y,title,30,'#2a9fc4');
+  const mb=btn(scene,GW-72,y,90,62,0xffffff,muted?'🔇':'🔊',()=>{muted=!muted;store.set('sempoaMute',muted?'1':'0');mb.label.setText(muted?'🔇':'🔊')},{white:true,size:28,textColor:'#24323d'});
+  if(o.lang){
+    const lb=btn(scene,GW-196,y,130,62,0xffffff,LANG==='id'?'🌐 ID':'🌐 EN',()=>{LANG=LANG==='id'?'en':'id';store.set('sempoaLang',LANG);scene.scene.restart(o.langData||{})},{white:true,size:26,textColor:'#24323d'});
+  }
+}
+function confetti(scene){
+  const e=scene.add.particles(0,0,'conf',{speed:{min:300,max:750},angle:{min:200,max:340},gravityY:1100,lifespan:1800,
+    scale:{start:1,end:.7},rotate:{min:0,max:360},tint:[0xff6a1a,0x4cc3e8,0xffd23f,0x2ec27e,0xff4d6d,0xb36bd6],emitting:false}).setDepth(100);
+  return n=>e.explode(n,GW/2,GH*0.45);
+}
+function sheet(scene,{kind,emoji,title,body,btnLabel,onBtn}){
+  const w=670,cx=GW/2;
+  const col={good:[0xe3f8ee,0xb5ecd1,'#1b9b62'],bad:[0xffe9ee,0xffc4d0,'#d93355'],info:[0xf3fbfe,0xcdeefa,'#2f7f93']}[kind];
+  const c=scene.add.container(cx,GH+20).setDepth(50);
+  const tt=txt(scene,-w/2+118,24,title,32,col[2],{ox:0,oy:0,wrap:w-150,align:'left'});
+  const bt=txt(scene,-w/2+118,24+tt.height+2,body,23,'#24323d',{body:true,weight:'700',ox:0,oy:0,wrap:w-150,align:'left',ls:4});
+  let h=bt.y+bt.height+22; if(btnLabel) h+=104;
+  const g=scene.add.graphics();
+  g.fillStyle(0x000000,.08).fillRoundedRect(-w/2,8,w,h,30);
+  g.fillStyle(col[0],1).fillRoundedRect(-w/2,0,w,h,30);g.lineStyle(4,col[1],1).strokeRoundedRect(-w/2,0,w,h,30);
+  const em=txt(scene,-w/2+60,62,emoji,64);
+  c.add([g,em,tt,bt]);
+  if(btnLabel){const b=btn(scene,0,h-64,320,78,C.orange,btnLabel,onBtn,{size:32});c.add(b);}
+  scene.tweens.add({targets:c,y:GH-30-h,duration:380,ease:'Back.Out'});
+  c.sheetH=h;
+  return c;
+}
+
+// ---------------------------------------------------------------- Abacus (soroban)
+const AB={PAD:22,BW:112,BH:46,BEAM_TOP:130,BEAM_H:18,ROD_H:416,RW:140};
+const H_ON=AB.BEAM_TOP-AB.BH-2, H_OFF=8, E_ACT0=AB.BEAM_TOP+AB.BEAM_H+2, E_FREE0=AB.ROD_H-8-4*AB.BH;
+const yH=on=>AB.PAD+(on?H_ON:H_OFF);
+const yE=(k,on)=>AB.PAD+(on?E_ACT0:E_FREE0)+k*AB.BH;
+const BEAD_COLORS=[[0xff9bbb,0xe04877],[0xffdc6a,0xd99a00],[0x7fd4fb,0x1f93c9],[0x94e6a6,0x34a250]];
+
+class Abacus{
+  constructor(scene,cx,top,rods,opts={}){
+    Object.assign(this,{s:scene,n:rods,opts,locked:false,fingers:0,drags:new Map(),busy:new Set(),dead:false});
+    this.k=opts.scale||1;
+    this.state=Array.from({length:rods},()=>({h:0,e:0}));
+    const W=rods*AB.RW+2*AB.PAD, H=AB.PAD+AB.ROD_H+92;
+    this.W=W; this.Hpx=(H+(opts.noHint?0:56))*this.k;
+    const c=this.c=scene.add.container(cx-W*this.k/2,top).setScale(this.k);
+    const g=scene.add.graphics();
+    g.fillStyle(C.woodD,1).fillRoundedRect(0,10,W,H,30);
+    g.fillStyle(C.wood,1).fillRoundedRect(0,0,W,H,30);
+    g.fillStyle(0xc98450,1).fillRoundedRect(6,4,W-12,10,6);
+    g.fillStyle(0xfff8ec,1).fillRoundedRect(AB.PAD-8,AB.PAD,W-2*AB.PAD+16,AB.ROD_H,16);
+    c.add(g);
+    this.glowG=scene.add.graphics(); c.add(this.glowG);
+    const g2=scene.add.graphics(); c.add(g2);
+    this.rodX=[];this.beads=[];this.digitT=[];this.placeT=[];
+    for(let r=0;r<rods;r++){const x=AB.PAD+AB.RW*r+AB.RW/2;this.rodX.push(x);
+      g2.fillStyle(0x9c9c9c,1).fillRect(x-5,AB.PAD+4,10,AB.ROD_H-8);g2.fillStyle(0xe6e6e6,1).fillRect(x-2,AB.PAD+4,3,AB.ROD_H-8);}
+    g2.fillStyle(C.woodD,1).fillRect(AB.PAD-8,AB.PAD+AB.BEAM_TOP,W-2*AB.PAD+16,AB.BEAM_H);
+    this.rodX.forEach(x=>g2.fillStyle(0xffe9b0,1).fillCircle(x,AB.PAD+AB.BEAM_TOP+AB.BEAM_H/2,4));
+    for(let r=0;r<rods;r++){
+      const x=this.rodX[r],place=rods-1-r,tex='bead'+(place%4);
+      const mk=(kind,k)=>{const im=scene.add.image(x,0,tex).setOrigin(.5,0).setInteractive({useHandCursor:true});
+        im.on('pointerdown',p=>this.grab(p,r,kind,k));c.add(im);return im;};
+      const h=mk('h',0),e=[0,1,2,3].map(k=>mk('e',k));
+      this.beads.push({h,e});
+      const pt=txt(scene,x,AB.PAD+AB.ROD_H+30,L().places[place],22,'#ffffff');
+      const dt=txt(scene,x,AB.PAD+AB.ROD_H+66,'0',34,'#ffe9b0');
+      c.add([pt,dt]);this.placeT.push(pt);this.digitT.push(dt);
+    }
+    if(!opts.noHint){this.hintT=txt(scene,W/2,H+36,L().hint,20,'#7b8a95',{body:true,wrap:Math.max(W,560)});c.add(this.hintT);}
+    this.toastT=txt(scene,W/2,-20,'',34,'#24323d',{stroke:'#ffd23f',st:12}).setAlpha(0);c.add(this.toastT);
+    this.onMove=p=>this.move(p); this.onUp=p=>this.up(p);
+    scene.input.on('pointermove',this.onMove);scene.input.on('pointerup',this.onUp);scene.input.on('pointerupoutside',this.onUp);
+    scene.events.once('shutdown',()=>this.detach());
+    this.update(true); this.resetTechnique();
+  }
+  detach(){this.s.input.off('pointermove',this.onMove);this.s.input.off('pointerup',this.onUp);this.s.input.off('pointerupoutside',this.onUp);}
+  destroy(){if(this.dead)return;this.dead=true;this.detach();this.c.destroy();}
+  localY(p){return (p.y-this.c.y)/this.k-AB.PAD}
+
+  // ---- technique (pinch) tracking ----
+  // A gesture lasts from the first finger down until the last finger lifts.
+  // If one gesture moved BOTH the top and bottom beads on a rod, that rod was pinched.
+  beginGesture(){if(this.fingers===0)this.gesture={};this.fingers++;}
+  record(r,bit){this.gesture[r]=(this.gesture[r]||0)|bit;}
+  endGesture(){
+    this.fingers=Math.max(0,this.fingers-1); if(this.fingers>0) return;
+    let pinched=false;
+    for(const r in this.gesture) if(this.gesture[r]===3){this.pinched[r]=true;pinched=true;}
+    if(pinched){sfx.pinch();this.toast(L().pinch);}
+  }
+  resetTechnique(){this.pinched={};this.fingers=0;this.gesture={};this.startState=this.state.map(s=>({...s}));}
+  techniqueErrors(){ // place indexes where top+bottom both changed but not in one pinch
+    const out=[];
+    this.state.forEach((s,r)=>{const s0=this.startState[r];if(s.h!==s0.h&&s.e!==s0.e&&!this.pinched[r])out.push(this.n-1-r);});
+    return out;
+  }
+  toast(t){this.s.tweens.killTweensOf(this.toastT);this.toastT.setText(t).setAlpha(1).setY(-20).setScale(.6);
+    this.s.tweens.add({targets:this.toastT,scale:1.1,duration:200,ease:'Back.Out'});
+    this.s.tweens.add({targets:this.toastT,y:-60,alpha:0,delay:700,duration:500});}
+
+  // ---- dragging ----
+  grab(p,r,kind,k){
+    if(this.locked||this.drags.has(p.id)) return;
+    const s=this.state[r],b=this.beads[r];
+    let group,travel;
+    if(kind==='h'){group=[b.h];travel=H_ON-H_OFF;}
+    else if(k<s.e){group=b.e.slice(k,s.e);travel=E_FREE0-E_ACT0;}   // counted: pull it + the ones below it down
+    else {group=b.e.slice(s.e,k+1);travel=E_FREE0-E_ACT0;}          // free: push it + the ones above it up
+    const sign=kind==='h'?(s.h?-1:1):(k<s.e?1:-1);                     // allowed direction (+1 down)
+    const pushingIn=(kind==='h'&&!s.h)||(kind==='e'&&k>=s.e);
+    group.forEach(im=>{this.s.tweens.killTweensOf(im);this.busy.add(im);im.setScale(1.05);});
+    this.beginGesture();
+    this.drags.set(p.id,{r,kind,k,group,travel,sign,pushingIn,bases:group.map(im=>im.y),y0:p.y,moved:0,crossH:false,crossK:-1,prev:new Set()});
+  }
+  preview(d,im,on,y){
+    if(on){this.busy.add(im);d.prev.add(im);} else {d.prev.delete(im);}
+    this.s.tweens.killTweensOf(im);
+    this.s.tweens.add({targets:im,y,duration:130,ease:'Quad.Out'});
+    im.setTint(on?0xfff6c0:0xffffff);
+    if(!on) this.busy.add(im); // keep it out of update() until release
+  }
+  move(p){
+    const d=this.drags.get(p.id); if(!d) return;
+    const s=this.state[d.r],b=this.beads[d.r];
+    d.moved=clamp((p.y-d.y0)/this.k*d.sign,0,d.travel);
+    d.group.forEach((im,i)=>im.y=d.bases[i]+d.moved*d.sign);
+    if(!d.pushingIn) return;
+    const rel=this.localY(p);
+    if(d.kind==='e'&&!s.h){ // bottom bead pushed up ACROSS the bar -> bring the top bead down too
+      const want=rel<AB.BEAM_TOP;
+      if(want!==d.crossH){d.crossH=want;this.preview(d,b.h,want,yH(want));}
+    }
+    if(d.kind==='h'&&s.e<4){ // top bead pulled down ACROSS the bar -> push bottom beads up to the one under the pointer
+      let kk=-1;
+      if(rel>AB.BEAM_TOP+AB.BEAM_H) kk=Math.max(s.e,Math.min(3,Math.floor((rel-E_FREE0)/AB.BH)));
+      if(kk!==d.crossK){d.crossK=kk;
+        b.e.forEach((im,i)=>{if(i<s.e)return;const on=kk>=0&&i<=kk;this.preview(d,im,on,yE(i,on));});}
+    }
+  }
+  up(p){
+    const d=this.drags.get(p.id); if(!d) return; this.drags.delete(p.id);
+    const s=this.state[d.r],b=this.beads[d.r];
+    d.group.forEach(im=>{this.busy.delete(im);im.setScale(1);});
+    [b.h,...b.e].forEach(im=>{if(!d.group.includes(im)&&this.busy.has(im)&&![...this.drags.values()].some(o=>o.group.includes(im))){this.busy.delete(im);}im.setTint(0xffffff);});
+    const committed=d.moved>d.travel*0.35||d.crossH||d.crossK>=0;
+    if(committed){
+      if(d.kind==='h'){s.h^=1;this.record(d.r,1);} else {s.e=d.k<s.e?d.k:d.k+1;this.record(d.r,2);}
+      if(d.crossH){s.h=1;this.record(d.r,1);}
+      if(d.crossK>=0){s.e=d.crossK+1;this.record(d.r,2);}
+      sfx.clack();
+    }
+    this.update(); this.endGesture();
+    if(committed&&this.opts.onChange) this.opts.onChange(this.value());
+  }
+  update(instant){
+    for(let r=0;r<this.n;r++){
+      const s=this.state[r],b=this.beads[r];
+      const go=(im,y)=>{if(this.busy.has(im))return;this.s.tweens.killTweensOf(im);
+        if(instant){im.y=y;return;} if(Math.abs(im.y-y)<.5)return;
+        this.s.tweens.add({targets:im,y,duration:180,ease:'Back.Out'});};
+      go(b.h,yH(s.h));b.e.forEach((im,k)=>go(im,yE(k,k<s.e)));
+      this.digitT[r].setText(this.opts.hideDigits?'?':String(s.h*5+s.e));
+    }
+    this.glowG.clear();
+    (this.opts.glow||[]).forEach(place=>{const r=this.n-1-place;if(r<0)return;const x=this.rodX[r];
+      this.glowG.fillStyle(C.yellow,.4).fillRoundedRect(x-AB.RW/2+10,AB.PAD+4,AB.RW-20,AB.ROD_H-8,14);});
+  }
+  value(){return this.state.reduce((a,s)=>a*10+s.h*5+s.e,0)}
+  set(n,instant){const s=String(n).padStart(this.n,'0').slice(-this.n);
+    this.state=[...s].map(c=>{const d=+c;return{h:d>=5?1:0,e:d%5}});this.update(instant);this.resetTechnique();}
+  animateTo(n,cb){const s=String(n).padStart(this.n,'0');let r=0;
+    const step=()=>{if(this.dead)return;if(r>=this.n){this.resetTechnique();cb&&cb();return;}
+      const d=+s[r];this.state[r]={h:d>=5?1:0,e:d%5};this.update();sfx.clack();r++;this.s.time.delayedCall(380,step);};
+    step();}
+  demo(n){ // show a pinch: all beads of each rod move at the same time
+    if(this.demoing) return; this.demoing=true;
+    const saved=this.state.map(s=>({...s})),wasLocked=this.locked; this.locked=true;
+    this.state=[...String(n).padStart(this.n,'0')].map(c=>{const d=+c;return{h:d>=5?1:0,e:d%5}});
+    this.update();sfx.clack();this.toast(L().pinch);sfx.pinch();
+    this.s.time.delayedCall(1500,()=>{if(this.dead)return;this.state=saved;this.update();this.locked=wasLocked;this.demoing=false;this.resetTechnique();});
+  }
+  reveal(){this.opts.hideDigits=false;this.update();}
+  lock(v){this.locked=v;if(this.hintT)this.hintT.setVisible(!v);}
+}
+
+function explain(n,rods){
+  const s=String(n).padStart(rods,'0'),out=[];
+  for(let k=0;k<rods;k++){const d=+s[k];out.push(`${L().places[rods-1-k]} ${d} → ${L().digit(d)}`);}
+  return out.join('\n');
+}
+const placeNames=list=>list.map(p=>L().places[p]).join(L().and);
+
+
+// ---------------------------------------------------------------- ABC Sempoa mascot: anime-style kid holding a sempoa (original SVG)
+function kidSVG(){
+  const beadCols=['#ff4d6d','#ffd23f','#2ec27e','#4fa3f7','#b36bd6'];
+  const rods=[78,104,130,156,182], show=[1,2,3,6,8];
+  let beads='';
+  rods.forEach((x,i)=>{
+    const d=show[i],h=d>=5,e=d%5,c=beadCols[i];
+    beads+=`<line x1="${x}" y1="226" x2="${x}" y2="300" stroke="#9c9c9c" stroke-width="3"/>`;
+    beads+=`<ellipse cx="${x}" cy="${h?240:233}" rx="11" ry="4.6" fill="${c}" stroke="#3a2416" stroke-width="1"/>`;
+    for(let k=0;k<4;k++){const yy=k<e?255+k*8.5:296-(3-k)*8.5;
+      beads+=`<ellipse cx="${x}" cy="${yy}" rx="11" ry="4.3" fill="${c}" stroke="#3a2416" stroke-width="1"/>`;}
+  });
+  const O='stroke="#3a2416" stroke-width="2.5" stroke-linejoin="round"';
+  const eye=(cx,flip)=>`
+    <ellipse cx="${cx}" cy="122" rx="17" ry="22" fill="#fff" ${O}/>
+    <ellipse cx="${cx+(flip?-1:1)}" cy="125" rx="13.5" ry="18.5" fill="url(#iris)"/>
+    <ellipse cx="${cx+(flip?-1:1)}" cy="127" rx="6.5" ry="9" fill="#10204f"/>
+    <circle cx="${cx-5}" cy="115" r="5.5" fill="#fff"/>
+    <circle cx="${cx+5}" cy="134" r="2.6" fill="#fff"/>
+    <path d="M${cx-9} 139 Q${cx} 144 ${cx+9} 139" stroke="#9fe3ff" stroke-width="2" fill="none" opacity=".8"/>
+    <path d="M${cx-19} 109 Q${cx} 95 ${cx+19} 109" stroke="#2b1a10" stroke-width="5" fill="none" stroke-linecap="round"/>
+    <path d="M${flip?cx+19:cx-19} 109 l${flip?6:-6} -3" stroke="#2b1a10" stroke-width="4" stroke-linecap="round"/>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 260 340" width="520" height="680">
+  <defs>
+    <linearGradient id="iris" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1b3a8f"/><stop offset=".55" stop-color="#2f7fd8"/><stop offset="1" stop-color="#6fd6ff"/></linearGradient>
+    <linearGradient id="hair" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3b2212"/><stop offset="1" stop-color="#7a4a24"/></linearGradient>
+    <linearGradient id="shirt" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3ab7ee"/><stop offset="1" stop-color="#1f8fd0"/></linearGradient>
+  </defs>
+  <ellipse cx="130" cy="330" rx="78" ry="9" fill="#000" opacity=".15"/>
+  <!-- legs & shoes -->
+  <rect x="100" y="282" width="26" height="40" rx="9" fill="#2f4f8f" ${O}/>
+  <rect x="134" y="282" width="26" height="40" rx="9" fill="#2f4f8f" ${O}/>
+  <path d="M88 330 Q88 314 112 316 Q126 318 126 330 Z" fill="#e53935" ${O}/>
+  <path d="M134 330 Q134 318 148 316 Q172 314 172 330 Z" fill="#e53935" ${O}/>
+  <!-- back hair -->
+  <path d="M48 112 Q40 30 130 22 Q220 30 212 112 Q206 150 190 160 L70 160 Q54 150 48 112 Z" fill="url(#hair)" ${O}/>
+  <!-- body -->
+  <path d="M78 290 Q72 205 130 196 Q188 205 182 290 Z" fill="url(#shirt)" ${O}/>
+  <path d="M106 198 L130 222 L154 198 Q130 206 106 198 Z" fill="#fff" ${O}/>
+  <path d="M122 214 L130 232 L138 214 Z" fill="#e53935" stroke="#3a2416" stroke-width="1.5"/>
+  <!-- neck -->
+  <rect x="118" y="180" width="24" height="22" fill="#f7c9a8" ${O}/>
+  <!-- face -->
+  <path d="M60 104 Q60 182 130 190 Q200 182 200 104 Q200 50 130 48 Q60 50 60 104 Z" fill="#ffe3cc" ${O}/>
+  <ellipse cx="60" cy="122" rx="9" ry="13" fill="#ffe3cc" ${O}/><ellipse cx="200" cy="122" rx="9" ry="13" fill="#ffe3cc" ${O}/>
+  <!-- bangs (spiky anime hair) -->
+  <path d="M52 112 Q50 40 130 30 Q212 36 208 112 L198 84 L190 104 L182 72 L170 98 L160 64 L146 92 L134 60 L120 94 L106 62 L96 98 L84 70 L76 104 L66 82 Z" fill="url(#hair)" ${O}/>
+  <path d="M120 20 Q132 4 150 10 Q136 14 134 30 Z" fill="url(#hair)" ${O}/>
+  <path d="M78 54 Q120 34 176 50" stroke="#fff" stroke-width="5" fill="none" opacity=".35" stroke-linecap="round"/>
+  <path d="M92 60 Q120 48 150 54" stroke="#fff" stroke-width="3" fill="none" opacity=".25" stroke-linecap="round"/>
+  ${eye(100,false)}${eye(160,true)}
+  <!-- blush -->
+  <ellipse cx="82" cy="152" rx="13" ry="7" fill="#ff8fa3" opacity=".55"/><ellipse cx="178" cy="152" rx="13" ry="7" fill="#ff8fa3" opacity=".55"/>
+  <path d="M76 154 l4 -6 M82 155 l4 -6 M88 155 l4 -6" stroke="#ff5c7a" stroke-width="1.6" opacity=".7"/>
+  <path d="M168 155 l4 -6 M174 155 l4 -6 M180 154 l4 -6" stroke="#ff5c7a" stroke-width="1.6" opacity=".7"/>
+  <!-- nose & mouth -->
+  <path d="M129 146 l2 4" stroke="#d9967a" stroke-width="2" stroke-linecap="round"/>
+  <path d="M116 160 Q130 178 144 160 Z" fill="#b71c1c" ${O}/>
+  <path d="M122 168 Q130 174 138 168 Q130 164 122 168 Z" fill="#ff7a8a"/>
+  <!-- arms -->
+  <path d="M84 222 Q54 238 60 270" stroke="url(#shirt)" stroke-width="24" fill="none" stroke-linecap="round"/>
+  <path d="M176 222 Q206 238 200 270" stroke="url(#shirt)" stroke-width="24" fill="none" stroke-linecap="round"/>
+  <!-- sempoa -->
+  <g transform="rotate(-4 130 262)">
+    <rect x="48" y="214" width="164" height="98" rx="11" fill="#6e3d1a" ${O}/>
+    <rect x="48" y="212" width="164" height="96" rx="11" fill="#9a5b2e" ${O}/>
+    <rect x="58" y="222" width="144" height="80" rx="5" fill="#fff4dc"/>
+    ${beads}
+    <rect x="58" y="244" width="144" height="6" fill="#6e3d1a"/>
+  </g>
+  <!-- hands -->
+  <ellipse cx="56" cy="270" rx="13" ry="14" fill="#ffe3cc" ${O}/><ellipse cx="204" cy="268" rx="13" ry="14" fill="#ffe3cc" ${O}/>
+  <!-- sparkles -->
+  <path d="M232 46 l5 12 12 5 -12 5 -5 12 -5 -12 -12 -5 12 -5z" fill="#ffd23f" stroke="#fff" stroke-width="1.5"/>
+  <path d="M26 176 l3 8 8 3 -8 3 -3 8 -3 -8 -8 -3 8 -3z" fill="#4fc3f7"/>
+  <path d="M222 190 l2.5 6 6 2.5 -6 2.5 -2.5 6 -2.5 -6 -6 -2.5 6 -2.5z" fill="#ff8fa3"/>
+</svg>`;
+}
+// =====================================================================
+//  SCENES
+// =====================================================================
+class Boot extends Phaser.Scene{
+  constructor(){super('Boot')}
+  create(){
+    BEAD_COLORS.forEach(([light,dark],i)=>{
+      const g=this.make.graphics({x:0,y:0,add:false}),w=AB.BW,h=AB.BH;
+      const P=a=>a.map(([x,y])=>({x,y}));
+      g.fillStyle(dark,1).fillPoints(P([[w*.2,1],[w*.8,1],[w-1,h/2],[w*.8,h-1],[w*.2,h-1],[1,h/2]]),true);
+      g.fillStyle(light,1).fillPoints(P([[w*.2,1],[w*.8,1],[w-1,h/2],[1,h/2]]),true);
+      g.fillStyle(0xffffff,.5).fillEllipse(w/2,h*.2,w*.5,h*.16);
+      g.lineStyle(2,Phaser.Display.Color.ValueToColor(dark).darken(15).color,1).strokePoints(P([[w*.2,1],[w*.8,1],[w-1,h/2],[w*.8,h-1],[w*.2,h-1],[1,h/2]]),true);
+      g.generateTexture('bead'+i,w,h);g.destroy();
+    });
+    const g=this.make.graphics({add:false});g.fillStyle(0xffffff,1).fillRect(0,0,14,9);g.generateTexture('conf',14,9);g.destroy();
+    const img=new Image();
+    const go=()=>{const el=document.getElementById('loading');if(el)el.remove();this.scene.start('Home');};
+    img.onload=()=>{this.textures.addImage('kid',img);go();};
+    img.onerror=go;
+    img.src='data:image/svg+xml;charset=utf-8,'+encodeURIComponent(kidSVG());
+  }
+}
+
+// ---------------------------------------------------------------- HOME
+class Home extends Phaser.Scene{
+  constructor(){super('Home')}
+  create(){
+    drawBg(this); topBar(this,'',{home:false,lang:true});
+    const T=L();
+    // ---- ABC Sempoa logo ----
+    if(this.textures.exists('kid')){
+      const kid=this.add.image(200,382,'kid').setScale(.46);
+      this.tweens.add({targets:kid,y:370,angle:{from:-2,to:2},yoyo:true,repeat:-1,duration:900,ease:'Sine.InOut'});
+    }
+    const abc=[['A','#ff3b3b',-8],['B','#2ec27e',4],['C','#ffb300',-4]];
+    abc.forEach(([ch,col,ang],k)=>{
+      const t=txt(this,410+k*92,260,ch,128,col,{stroke:'#ffffff',st:16}).setAngle(ang);
+      t.setShadow(4,6,'rgba(0,0,0,.25)',0,true,true);
+      this.tweens.add({targets:t,y:244,yoyo:true,repeat:-1,duration:700,delay:k*180,ease:'Sine.InOut'});
+    });
+    const bw=330,bx=505,by=388;
+    const ban=this.add.graphics();
+    ban.fillStyle(0x1565c0,1).fillRoundedRect(bx-bw/2,by-38+6,bw,76,22);
+    ban.fillStyle(0x1e88e5,1).fillRoundedRect(bx-bw/2,by-38,bw,76,22);
+    txt(this,bx,by,'SEMPOA',58,'#ffffff',{stroke:'#0d47a1',st:8});
+    txt(this,GW/2,560,T.tagline,24,'#5b6b77',{body:true,weight:'700'});
+    const card=(y,color,emoji,t,sub,cb)=>{
+      const b=btn(this,GW/2,y,600,160,color,'',cb,{radius:36});
+      const e=txt(this,-220,0,emoji,74); const a=txt(this,-140,-28,t,46,'#ffffff',{ox:0}); const s=txt(this,-140,30,sub,21,'#ffffff',{ox:0,body:true,weight:'700',wrap:400,align:'left'});
+      [e,a,s].forEach(o=>{o.baseY=o.y;}); b.add([e,a,s]); b.extra=[e,a,s];
+      b.setScale(0); this.tweens.add({targets:b,scale:1,duration:450,delay:(y-700)/1.4,ease:'Back.Out'});
+    };
+    card(700,C.blue,'📚',T.learn,T.learnSub,()=>this.scene.start('Learn',{i:0}));
+    card(875,C.orange,'🎮',T.play,T.playSub,()=>this.scene.start('Challenge'));
+    card(1050,C.green,'🎨',T.free,T.freeSub,()=>this.scene.start('Free'));
+    const best=+store.get('sempoaBest','0');
+    if(best) txt(this,GW/2,1200,T.best(best),24,'#8c99a3',{body:true});
+  }
+}
+
+// ---------------------------------------------------------------- LEARN
+class Learn extends Phaser.Scene{
+  constructor(){super('Learn')}
+  create(data){
+    this.i=data.i||0; const Ls=LESSONS[this.i], T=L();
+    drawBg(this); topBar(this,T.lesson(this.i+1,LESSONS.length),{lang:true,langData:{i:this.i}});
+    this.burst=confetti(this);
+    // step dots
+    const n=LESSONS.length,gap=54,x0=GW/2-(n-1)*gap/2;
+    LESSONS.forEach((_,k)=>{const col=k<this.i?C.green:k===this.i?C.yellow:C.line;
+      this.add.circle(x0+k*gap,186,19,col);txt(this,x0+k*gap,186,String(k+1),20,k===this.i?'#24323d':'#ffffff');});
+    // lesson card
+    const top=222,w=660,left=(GW-w)/2;
+    const tt=txt(this,left+120,top+20,Ls.t[LANG],32,'#2f7f93',{ox:0,oy:0,wrap:w-140,align:'left'});
+    const xt=txt(this,left+120,tt.y+tt.height-2,Ls.x[LANG],22,'#24323d',{body:true,weight:'700',ox:0,oy:0,wrap:w-140,align:'left',ls:4});
+    const tk=txt(this,left+120,xt.y+xt.height+2,Ls.task[LANG],24,'#e0520a',{body:true,ox:0,oy:0,wrap:w-140,align:'left'});
+    const h=tk.y+tk.height+16-top;
+    const pg=panel(this,left,top,w,h,0xf3fbfe,0xcdeefa); pg.setDepth(-1);
+    const owl=txt(this,left+60,top+64,'🦉',66);this.tweens.add({targets:owl,y:top+54,yoyo:true,repeat:-1,duration:900,ease:'Sine.InOut'});
+    // abacus, scaled to fit
+    const abTop=top+h+60, room=1040-abTop, fullH=AB.PAD+AB.ROD_H+92+56;
+    const scale=clamp(room/fullH,.62,1);
+    this.ab=new Abacus(this,GW/2,abTop,Ls.rods,{scale,glow:Ls.glow,onChange:v=>this.check(v)});
+    if(Ls.start) this.ab.set(Ls.start,true);
+    // value
+    const vy=Math.min(abTop+this.ab.Hpx+46,1100);
+    this.valBg=panel(this,GW/2-110,vy-40,220,80,0xffffff,C.line,20);
+    this.valT=txt(this,GW/2,vy,'0',52,'#2a9fc4');
+    this.wordT=txt(this,GW/2,vy+60,'',22,'#8c99a3',{body:true,wrap:600});
+    // buttons
+    const by=1200;
+    btn(this,Ls.pinch?200:GW/2,by,250,80,0xffffff,T.reset,()=>{if(this.sheet)return;this.ab.set(Ls.start||0);this.show(this.ab.value())},{white:true,textColor:'#2f7f93',size:28});
+    if(Ls.pinch) btn(this,520,by,280,80,C.purple,T.showMe,()=>{if(this.sheet)return;this.ab.demo(Ls.target)},{size:28});
+    this.done=false; this.show(this.ab.value());
+  }
+  show(v){this.valT.setText(String(v));this.wordT.setText(L().words(v));}
+  check(v){
+    this.show(v); if(this.done) return;
+    const Ls=LESSONS[this.i],T=L();
+    if(v!==Ls.target) return;
+    const errs=Ls.pinch?this.ab.techniqueErrors():[];
+    this.done=true; this.ab.lock(true);
+    if(errs.length){
+      sfx.bad(); this.cameras.main.shake(200,.006);
+      this.sheet=sheet(this,{kind:'bad',emoji:'🙈',title:T.wrongMoveT,body:T.wrongMoveB(placeNames(errs))});
+      this.time.delayedCall(2800,()=>{
+        this.tweens.add({targets:this.sheet,y:GH+40,duration:300,onComplete:()=>{this.sheet.destroy();this.sheet=null;}});
+        this.ab.set(Ls.start||0);this.ab.lock(false);this.show(this.ab.value());this.done=false;});
+      return;
+    }
+    sfx.good(); this.burst(70);
+    const last=this.i===LESSONS.length-1;
+    this.sheet=sheet(this,{kind:'good',emoji:'🎉',title:pickOne(T.wellDone),body:explain(v,Ls.rods),
+      btnLabel:last?T.finish:T.next,onBtn:()=>last?this.scene.start('Cert'):this.scene.start('Learn',{i:this.i+1})});
+  }
+}
+
+// ---------------------------------------------------------------- CERT
+class Cert extends Phaser.Scene{
+  constructor(){super('Cert')}
+  create(){
+    drawBg(this); topBar(this,'',{}); const T=L();
+    const m=this.textures.exists('kid')?this.add.image(GW/2,370,'kid').setScale(.5):txt(this,GW/2,400,'🏅',190);
+    this.tweens.add({targets:m,y:350,yoyo:true,repeat:-1,duration:600,ease:'Sine.InOut'});
+    txt(this,GW/2+150,250,'🏅',90);
+    txt(this,GW/2,610,T.certT,56,'#ff6a1a');
+    txt(this,GW/2,720,T.certB,28,'#24323d',{body:true,wrap:600});
+    btn(this,GW/2,900,440,96,C.orange,T.tryChallenge,()=>this.scene.start('Challenge'),{size:34});
+    btn(this,GW/2,1030,300,80,0xffffff,T.home,()=>this.scene.start('Home'),{white:true,textColor:'#2f7f93',size:28});
+    const b=confetti(this); sfx.win(); b(200); this.time.delayedCall(700,()=>b(150));
+  }
+}
+
+// ---------------------------------------------------------------- CHALLENGE
+const PLAN=[['build',1,9],['read',1,9],['build',2,99],['add',2,0],['read',2,99],['sub',2,0],['build',2,99],['read',3,999],['add',3,0],['build',3,999]];
+// Keep add/take-away rounds to moves the pinch supports: adding may need a pinch-in
+// (top + bottom beads toward the bar). No "mixed" 5-complement moves in this prototype.
+function badMove(a,b,rods,allowPinchIn){
+  const A=String(a).padStart(rods,'0'),B=String(b).padStart(rods,'0');
+  for(let k=0;k<rods;k++){const x=+A[k],y=+B[k];const dh=(y>=5)-(x>=5),de=(y%5)-(x%5);
+    if(dh&&de){if(dh*de<0)return true;if(!(allowPinchIn&&dh>0))return true;}}
+  return false;
+}
+function makeRound([type,rods,max]){
+  for(let t=0;t<500;t++){
+    const R={type,rods};
+    if(type==='build'){R.target=rnd(rods===1?1:10,max);R.start=0;return R;}
+    if(type==='read'){R.target=rnd(rods===1?1:10**(rods-1),max);
+      const c=new Set([R.target]),s=String(R.target);
+      for(const x of shuffle([+[...s].reverse().join(''),R.target+5,R.target-5,R.target+10,R.target-10,R.target+1,R.target-1,R.target+50,R.target-50,R.target+100])){if(c.size>=4)break;if(x>0&&x<10**rods)c.add(x);}
+      while(c.size<4)c.add(rnd(1,10**rods-1));R.options=shuffle([...c]);return R;}
+    if(type==='add'){const a=rnd(rods===2?11:110,rods===2?60:500),b=rnd(rods===2?3:20,rods===2?35:400);
+      Object.assign(R,{start:a,delta:b,target:a+b});if(R.target<10**rods&&!badMove(a,R.target,rods,true))return R;}
+    if(type==='sub'){const a=rnd(rods===2?30:300,rods===2?99:999),b=rnd(2,Math.min(40,a-5));
+      Object.assign(R,{start:a,delta:b,target:a-b});if(!badMove(a,R.target,rods,false))return R;}
+  }
+  return {type:'build',rods,target:rnd(1,9),start:0};
+}
+const TYPE_COL={build:C.orange,read:C.blue,add:C.green,sub:C.purple};
+const TIME=30;
+
+class Challenge extends Phaser.Scene{
+  constructor(){super('Challenge')}
+  create(){
+    drawBg(this); const T=L();
+    btn(this,82,118,110,62,0xffffff,'🏠',()=>this.scene.start('Home'),{white:true,size:30,textColor:'#24323d'});
+    panel(this,170,90,200,58,0xffffff,C.line,29); this.scoreT=txt(this,270,119,'⭐ 0',28,'#24323d');
+    panel(this,385,90,160,58,0xffffff,0xffd0b5,29); this.comboT=txt(this,465,119,'🔥 x1',28,'#e0520a');
+    const mb=btn(this,GW-72,118,90,62,0xffffff,muted?'🔇':'🔊',()=>{muted=!muted;store.set('sempoaMute',muted?'1':'0');mb.label.setText(muted?'🔇':'🔊')},{white:true,size:28,textColor:'#24323d'});
+    this.burst=confetti(this);
+    this.progG=this.add.graphics(); this.timerG=this.add.graphics();
+    this.rounds=PLAN.map(makeRound); this.ri=0; this.score=0; this.combo=1; this.streak=0; this.best=0; this.correct=0; this.results=[];
+    this.objs=[]; this.load();
+  }
+  drawProgress(){
+    const g=this.progG;g.clear();const w=(GW-120-9*8)/10;
+    this.rounds.forEach((_,k)=>{const r=this.results[k];const col=r?(r.ok?C.green:C.red):k===this.ri?C.yellow:C.line;
+      g.fillStyle(col,1).fillRoundedRect(60+k*(w+8),170,w,14,7);});
+  }
+  clear(){this.objs.forEach(o=>o.destroy());this.objs=[];if(this.ab){this.ab.destroy();this.ab=null;}if(this.sh){this.sh.destroy();this.sh=null;}}
+  load(){
+    this.clear(); const R=this.rounds[this.ri],T=L(); this.answered=false;
+    this.drawProgress();
+    const o=this.objs;
+    o.push(txt(this,60,228,T.round(this.ri+1),34,'#4cc3e8',{ox:0}));
+    const bw=230; const bg=panel(this,GW-60-bw,206,bw,46,TYPE_COL[R.type],null,23); o.push(bg);
+    o.push(txt(this,GW-60-bw/2,229,T.types[R.type],24,'#ffffff'));
+    // instruction
+    let ins;
+    if(R.type==='build') ins=T.instrBuild(R.target);
+    if(R.type==='read') ins=T.instrRead;
+    if(R.type==='add') ins=T.instrAdd(R.start,R.delta);
+    if(R.type==='sub') ins=T.instrSub(R.start,R.delta);
+    const it=txt(this,GW/2,R.type==='read'?330:340,ins,R.type==='build'?32:30,'#24323d',{wrap:620});
+    o.push(it);
+    if(R.type==='build'){ // make the number pop
+      const lines=ins.split('\n');it.setText(lines[0]);it.y=310;
+      const big=txt(this,GW/2,370,lines[1],76,'#ff6a1a',{stroke:'#ffffff',st:8});o.push(big);
+      this.tweens.add({targets:big,scale:{from:.4,to:1},duration:400,ease:'Back.Out'});
+    }
+    const scale=R.rods===1?.92:.9;
+    this.ab=new Abacus(this,GW/2,440,R.rods,{scale,hideDigits:true,noHint:R.type==='read'});
+    if(R.type==='read'){
+      this.ab.set(R.target,true);this.ab.lock(true);
+      R.options.forEach((v,k)=>{const cols=[C.blue,C.purple,C.green,0xff8c42];
+        const b=btn(this,GW/2+(k%2?165:-165),1010+Math.floor(k/2)*120,300,96,cols[k],String(v),()=>this.submit(v,[],b),{size:46});
+        b.val=v;o.push(b);});
+    } else {
+      this.ab.set(R.start||0,true);
+      o.push(btn(this,200,1060,260,86,0xffffff,T.clear,()=>{if(!this.answered)this.ab.set(R.start||0)},{white:true,textColor:'#2f7f93',size:30}));
+      o.push(btn(this,500,1060,300,86,C.orange,T.check,()=>{if(!this.answered)this.submit(this.ab.value(),this.ab.techniqueErrors())},{size:32}));
+    }
+    this.t0=this.time.now;
+  }
+  update(){
+    const g=this.timerG;g.clear();if(!this.rounds)return;
+    const left=this.answered?this.leftFrac:clamp(1-(this.time.now-this.t0)/(TIME*1000),0,1);
+    g.fillStyle(C.line,1).fillRoundedRect(60,270,GW-120,12,6);
+    const col=left>.5?C.green:left>.2?C.yellow:C.orange;
+    if(left>0) g.fillStyle(col,1).fillRoundedRect(60,270,(GW-120)*left,12,6);
+  }
+  submit(given,errs,pickedBtn){
+    if(this.answered) return; this.answered=true;
+    this.leftFrac=clamp(1-(this.time.now-this.t0)/(TIME*1000),0,1);
+    const R=this.rounds[this.ri],T=L(),rightNum=given===R.target,ok=rightNum&&!errs.length;
+    this.ab.lock(true); this.ab.reveal();
+    if(R.type==='read') this.objs.filter(b=>b.val!==undefined).forEach(b=>{b.setEnabled(false);
+      if(b.val===R.target){b.setAlpha(1);this.tweens.add({targets:b,scale:1.08,yoyo:true,repeat:2,duration:150});}
+      else if(b===pickedBtn){b.setAlpha(1);b.label.setText('✖ '+b.val);}});
+    let how=explain(R.target,R.rods);
+    if(R.type==='add') how=`${R.start} + ${R.delta} = ${R.target}\n`+how;
+    if(R.type==='sub') how=`${R.start} − ${R.delta} = ${R.target}\n`+how;
+    let kind,emoji,title;
+    if(ok){
+      this.correct++;this.streak++;this.best=Math.max(this.best,this.streak);
+      const gained=(100+Math.round(TIME*this.leftFrac*3))*this.combo;this.score+=gained;this.combo=Math.min(5,this.combo+1);
+      kind='good';emoji=pickOne(['🥳','😎','🤩','🦄']);title=pickOne(T.praise)+`  +${gained}`;
+      sfx.good();this.burst(60);
+      const f=txt(this,GW/2,430,'+'+gained,60,'#2ec27e',{stroke:'#ffffff',st:8}).setDepth(60);
+      this.tweens.add({targets:f,y:340,alpha:0,duration:1000,onComplete:()=>f.destroy()});
+    } else {
+      this.streak=0;this.combo=1;kind='bad';emoji='🤔';
+      title=rightNum?T.noPinchT:`${pickOne(T.cheer)} ${T.answerIs(R.target)}`;
+      if(rightNum) how=T.noPinchB(placeNames(errs))+'\n'+how;
+      sfx.bad();this.cameras.main.shake(220,.006);
+      if(R.type!=='read'&&!rightNum) this.time.delayedCall(500,()=>this.ab&&this.ab.animateTo(R.target));
+    }
+    this.results.push({R,ok,given,noPinch:rightNum&&!ok});
+    this.scoreT.setText('⭐ '+this.score);this.comboT.setText('🔥 x'+this.combo);this.drawProgress();
+    const last=this.ri===this.rounds.length-1;
+    this.sh=sheet(this,{kind,emoji,title,body:how,btnLabel:last?'🏆':T.next,onBtn:()=>{
+      if(last){
+        const b=+store.get('sempoaBest','0');if(this.score>b)store.set('sempoaBest',String(this.score));
+        this.scene.start('Result',{score:this.score,correct:this.correct,best:this.best,results:this.results});
+      } else {this.ri++;this.load();}
+    }});
+  }
+}
+
+// ---------------------------------------------------------------- RESULT
+class Result extends Phaser.Scene{
+  constructor(){super('Result')}
+  create(d){
+    drawBg(this); topBar(this,'',{lang:true,langData:d}); const T=L();
+    txt(this,GW/2,200,T.results,30,'#2a9fc4');
+    const st=d.correct>=8?3:d.correct>=6?2:d.correct>=3?1:0;
+    txt(this,GW/2,265,d.correct===10?T.perfect:T.endTitles[st],50,'#ff6a1a');
+    for(let k=0;k<3;k++){const s=txt(this,GW/2+(k-1)*130,385,'⭐',100).setAlpha(.25).setScale(.6);
+      if(k<st) this.time.delayedCall(400+k*350,()=>{s.setAlpha(1);this.tweens.add({targets:s,scale:1,duration:350,ease:'Back.Out'});sfx.star(k);});}
+    txt(this,GW/2,485,T.endMsgs[st],24,'#5b6b77',{body:true,wrap:620});
+    [[d.correct+'/10',T.correct],[d.score,T.points],[d.best,T.streak]].forEach(([v,l],k)=>{
+      const x=60+k*207;panel(this,x,540,193,120,0xf3fbfe,null,22);
+      txt(this,x+96,582,String(v),44,'#ff6a1a');txt(this,x+96,632,l,20,'#6b7a85',{body:true});});
+    panel(this,60,690,600,420,0xffffff,C.line,22);
+    d.results.forEach((r,k)=>{const R=r.R;
+      const q=R.type==='add'?`${R.start} + ${R.delta} = ${R.target}`:R.type==='sub'?`${R.start} − ${R.delta} = ${R.target}`:String(R.target);
+      const y=718+k*40;
+      txt(this,80,y,`${k+1}. ${T.types[R.type]}   ${q}`,22,'#24323d',{body:true,weight:'700',ox:0});
+      txt(this,640,y,r.ok?'✅':r.noPinch?T.noPinchR:T.youSaid(r.given),20,r.ok?'#1b9b62':'#d93355',{body:true,ox:1});});
+    btn(this,200,1190,260,84,0xffffff,T.home,()=>this.scene.start('Home'),{white:true,textColor:'#2f7f93',size:28});
+    btn(this,500,1190,300,84,C.orange,T.playAgain,()=>this.scene.start('Challenge'),{size:30});
+    if(st>=2){const b=confetti(this);sfx.win();b(180);this.time.delayedCall(700,()=>b(140));}
+  }
+}
+
+// ---------------------------------------------------------------- FREE PLAY
+class Free extends Phaser.Scene{
+  constructor(){super('Free')}
+  create(){
+    drawBg(this); topBar(this,'',{lang:true}); const T=L();
+    txt(this,GW/2,210,T.freeInstr,28,'#24323d',{wrap:620});
+    this.ab=new Abacus(this,GW/2,300,4,{scale:1,onChange:v=>this.show(v)});
+    const vy=300+this.ab.Hpx+60;
+    panel(this,GW/2-150,vy-48,300,96,0xffffff,C.line,24);
+    this.valT=txt(this,GW/2,vy,'0',64,'#2a9fc4');
+    this.wordT=txt(this,GW/2,vy+80,'',24,'#8c99a3',{body:true,wrap:620});
+    btn(this,200,vy+170,250,82,0xffffff,T.clear,()=>{this.ab.set(0);this.show(0)},{white:true,textColor:'#2f7f93',size:28});
+    btn(this,500,vy+170,300,82,C.orange,T.surprise,()=>{const n=rnd(1,9999);this.ab.set(0,true);this.ab.animateTo(n,()=>this.show(n))},{size:28});
+    this.show(0);
+  }
+  show(v){this.valT.setText(String(v));this.wordT.setText(L().words(v));}
+}
+
+// =====================================================================
+const config={
+  type:Phaser.AUTO, parent:'game', width:GW, height:GH, backgroundColor:'#ffd59a',
+  scale:{mode:Phaser.Scale.FIT,autoCenter:Phaser.Scale.CENTER_BOTH},
+  input:{activePointers:4},
+  scene:[Boot,Home,Learn,Cert,Challenge,Result,Free]
+};
+const fontsReady=(document.fonts&&document.fonts.load)
+  ? Promise.race([Promise.all([document.fonts.load('800 40px "Baloo 2"'),document.fonts.load('700 24px "Nunito"'),document.fonts.load('800 24px "Nunito"')]).catch(()=>{}),new Promise(r=>setTimeout(r,2500))])
+  : Promise.resolve();
+fontsReady.then(()=>new Phaser.Game(config));
+}
+// wait for the engine (it may come from the fallback CDN) before defining scenes
+(function wait(t0){
+  if(window.Phaser) return SEMPOA();
+  if(Date.now()-t0>12000){document.getElementById('loading').textContent='Could not load the game engine 😢';return;}
+  setTimeout(()=>wait(t0),100);
+})(Date.now());
+</script>
+</body>
+</html>
