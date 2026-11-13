@@ -24,7 +24,7 @@ function SEMPOA(){
 //  ABC Sempoa (Aku Bisa Calistung)  — Phaser 3, portrait 720 x 1280
 // =====================================================================
 const GW=720, GH=1280;
-const VERSION='1.2.0';
+const VERSION='1.2.1';
 const FONT="'Baloo 2', 'Nunito', Arial, sans-serif";
 const BODY="'Nunito', Arial, sans-serif";
 const C={teal:0x2f7f93,sky:0x4cc3e8,skyD:0x2a9fc4,orange:0xff6a1a,green:0x2ec27e,red:0xff4d6d,yellow:0xffd23f,
@@ -80,7 +80,7 @@ const I18N={
   play:'Challenge', playSub:'10 rounds: build, read, add & take away',
   free:'Free Play', freeSub:'Slide the beads and see the number',
   best:n=>`🏆 Best Challenge score: ${n}`, lesson:(i,n)=>`Lesson ${i}/${n}`,
-  reset:'↺ Reset', showMe:'👀 Show me', next:'Next ➜', finish:'Finish 🏅', check:'Check ✓', clear:'↺ Clear',
+  reset:'↺ Reset', showMe:'👀 Show me', prev:'◀ Back', next:'Next ➜', finish:'Finish 🏅', check:'Check ✓', clear:'↺ Clear',
   round:i=>`Round ${i}/10`,
   types:{build:'🧱 Build It',read:'👀 Read It',add:'➕ Add It',sub:'➖ Take Away'},
   instrBuild:n=>`Show this number on the abacus:\n${n}`, instrRead:'What number is on the abacus? 🤔',
@@ -120,7 +120,7 @@ const I18N={
   play:'Tantangan', playSub:'10 ronde: susun, baca, tambah & kurang',
   free:'Main Bebas', freeSub:'Geser manik dan lihat angkanya',
   best:n=>`🏆 Skor Tantangan terbaik: ${n}`, lesson:(i,n)=>`Pelajaran ${i}/${n}`,
-  reset:'↺ Ulangi', showMe:'👀 Contohkan', next:'Lanjut ➜', finish:'Selesai 🏅', check:'Periksa ✓', clear:'↺ Hapus',
+  reset:'↺ Ulangi', showMe:'👀 Contohkan', prev:'◀ Kembali', next:'Lanjut ➜', finish:'Selesai 🏅', check:'Periksa ✓', clear:'↺ Hapus',
   round:i=>`Ronde ${i}/10`,
   types:{build:'🧱 Susun Angka',read:'👀 Baca Angka',add:'➕ Tambah',sub:'➖ Kurang'},
   instrBuild:n=>`Tunjukkan angka ini di sempoa:\n${n}`, instrRead:'Angka berapa di sempoa? 🤔',
@@ -173,8 +173,8 @@ const LESSONS=[
   task:{en:'👉 Make 5 with only the top bead.',id:'👉 Buat angka 5 dengan manik atas saja.'}},
  {rods:1,target:6,pinch:true,
   t:{en:'The Pinch 🤏',id:'Jepit 🤏'},
-  x:{en:'6 to 9 use the top bead AND bottom beads, moved at the SAME time like a pinch!\n✌️ Two fingers: pull the top bead down and push a bottom bead up together.\n☝️ One finger or mouse: slide the top bead down THROUGH the bar onto the bottom bead you want.',
-     id:'6 sampai 9 memakai manik atas DAN manik bawah yang digerakkan BERSAMAAN, seperti menjepit!\n✌️ Dua jari: tarik manik atas ke bawah dan dorong manik bawah ke atas bersamaan.\n☝️ Satu jari atau mouse: geser manik atas turun MELEWATI palang sampai ke manik bawah yang kamu mau.'},
+  x:{en:'6–9 = top bead + bottom beads, moved TOGETHER like a pinch!\n✌️ Two fingers: pull the top bead down & push bottom beads up together.\n☝️ One finger: slide the top bead down THROUGH the bar onto the bottom beads.',
+     id:'6–9 = manik atas + manik bawah, digerakkan BERSAMAAN seperti menjepit!\n✌️ Dua jari: tarik manik atas turun & dorong manik bawah naik bersamaan.\n☝️ Satu jari: geser manik atas turun MELEWATI palang ke manik bawah.'},
   task:{en:"👉 Make 6 in ONE pinch. One by one doesn't count!",id:'👉 Buat 6 dengan SATU jepitan. Satu per satu tidak dihitung!'}},
  {rods:1,target:8,pinch:true,
   t:{en:'Pinch Some More',id:'Jepit Lagi'},
@@ -335,6 +335,7 @@ AB.BEAM_TOP=H_ON+AB.BH+2;
 const E_ACT0=AB.BEAM_TOP+AB.BEAM_H+2, E_FREE0=E_ACT0+AB.TRAVEL;
 AB.ROD_H=E_FREE0+4*AB.BH+8;
 const abFullH=noHint=>AB.PAD+AB.ROD_H+96+(noHint?0:60);   // unscaled height of a whole abacus
+const AB_SCALE=0.86;   // one abacus size everywhere (lessons, challenge, free play)
 const PINCH_GRACE=450; // ms: top + bottom moves this close together still count as one pinch
 let BEADS=store.get('sempoaBeads','color');               // 'color' | 'brown'
 const yH=on=>AB.PAD+(on?H_ON:H_OFF);
@@ -704,28 +705,35 @@ class Learn extends Phaser.Scene{
     const n=LESSONS.length,gap=54,x0=GW/2-(n-1)*gap/2;
     LESSONS.forEach((_,k)=>{const col=k<this.i?C.green:k===this.i?C.yellow:C.line;
       this.add.circle(x0+k*gap,186,19,col);txt(this,x0+k*gap,186,String(k+1),20,k===this.i?'#24323d':'#ffffff');});
-    // lesson card
-    const top=222,w=660,left=(GW-w)/2;
-    const tt=txt(this,left+120,top+20,Ls.t[LANG],32,'#2f7f93',{ox:0,oy:0,wrap:w-140,align:'left'});
-    const xt=txt(this,left+120,tt.y+tt.height-2,Ls.x[LANG],22,'#24323d',{body:true,weight:'700',ox:0,oy:0,wrap:w-140,align:'left',ls:4});
-    const tk=txt(this,left+120,xt.y+xt.height+2,Ls.task[LANG],24,'#e0520a',{body:true,ox:0,oy:0,wrap:w-140,align:'left'});
-    const h=tk.y+tk.height+16-top;
-    const pg=panel(this,left,top,w,h,0xf3fbfe,0xcdeefa); pg.setDepth(-1);
-    const owl=txt(this,left+60,top+64,'🦉',66);this.tweens.add({targets:owl,y:top+54,yoyo:true,repeat:-1,duration:900,ease:'Sine.InOut'});
-    // abacus, scaled to fit
-    const abTop=top+h+56, room=1095-abTop;
-    const scale=clamp(Math.min(room/abFullH(false),660/(Ls.rods*AB.RW+2*AB.PAD)),.55,1);
-    this.ab=new Abacus(this,GW/2,abTop,Ls.rods,{scale,glow:Ls.glow,onChange:v=>this.check(v)});
+    // lesson card: FIXED size. Long text shrinks to fit, so the abacus never moves or changes size.
+    const top=212,w=660,left=(GW-w)/2,PH=238;
+    panel(this,left,top,w,PH,0xf3fbfe,0xcdeefa);
+    const owl=txt(this,left+56,top+60,'🦉',62);this.tweens.add({targets:owl,y:top+50,yoyo:true,repeat:-1,duration:900,ease:'Sine.InOut'});
+    let ts=30,bs=22,ks=23,tt,xt,tk;
+    for(;;){
+      [tt,xt,tk].forEach(o=>o&&o.destroy());
+      tt=txt(this,left+108,top+12,Ls.t[LANG],ts,'#2f7f93',{ox:0,oy:0,wrap:w-124,align:'left'});
+      xt=txt(this,left+108,tt.y+tt.height-6,Ls.x[LANG],bs,'#24323d',{body:true,weight:'700',ox:0,oy:0,wrap:w-124,align:'left',ls:1});
+      tk=txt(this,left+108,xt.y+xt.height-4,Ls.task[LANG],ks,'#e0520a',{body:true,ox:0,oy:0,wrap:w-124,align:'left'});
+      if(tk.y+tk.height<=top+PH-4||bs<=14) break;
+      bs--; ks=Math.max(16,ks-1); if(bs<19) ts=Math.max(24,ts-1);
+    }
+    // abacus: always the same size and place
+    const abTop=top+PH+30;
+    this.ab=new Abacus(this,GW/2,abTop,Ls.rods,{scale:AB_SCALE,glow:Ls.glow,onChange:v=>this.check(v)});
     if(Ls.start) this.ab.set(Ls.start,true);
-    // value
-    const vy=Math.min(abTop+this.ab.Hpx+18,1128);
-    this.valBg=panel(this,60,vy-32,170,64,0xffffff,C.line,18);
-    this.valT=txt(this,145,vy,'0',44,'#2a9fc4');
+    // number + words, in their own row under the abacus
+    const vy=abTop+this.ab.Hpx+40;
+    this.valBg=panel(this,60,vy-30,170,60,0xffffff,C.line,18);
+    this.valT=txt(this,145,vy,'0',42,'#2a9fc4');
     this.wordT=txt(this,250,vy,'',22,'#8c99a3',{body:true,ox:0,wrap:410,align:'left'});
-    // buttons
-    const by=1215;
-    btn(this,Ls.pinch?200:GW/2,by,250,80,0xffffff,T.reset,()=>{if(this.sheet)return;this.ab.set(Ls.start||0);this.show(this.ab.value())},{white:true,textColor:'#2f7f93',size:28});
-    if(Ls.pinch) btn(this,520,by,280,80,C.purple,T.showMe,()=>{if(this.sheet)return;this.ab.demo(Ls.target)},{size:28});
+    // buttons: back · reset · show me
+    const by=1200,busy=()=>this.sheet||this.ab.demoing;
+    const P=Ls.pinch?[[130,190],[340,200],[565,240]]:[[200,250],[500,280]];
+    const back=btn(this,P[0][0],by,P[0][1],78,0xffffff,T.prev,()=>{if(!busy())this.scene.start('Learn',{i:this.i-1})},{white:true,textColor:'#2f7f93',size:26});
+    if(this.i===0) back.setEnabled(false);
+    btn(this,P[1][0],by,P[1][1],78,0xffffff,T.reset,()=>{if(busy())return;this.ab.set(Ls.start||0);this.show(this.ab.value())},{white:true,textColor:'#2f7f93',size:26});
+    if(Ls.pinch) btn(this,P[2][0],by,P[2][1],78,C.purple,T.showMe,()=>{if(!busy())this.ab.demo(Ls.target)},{size:26});
     this.done=false; this.show(this.ab.value());
   }
   show(v){this.valT.setText(String(v));this.wordT.setText(L().words(v));}
@@ -834,8 +842,7 @@ class Challenge extends Phaser.Scene{
       const big=txt(this,GW/2,370,lines[1],76,'#ff6a1a',{stroke:'#ffffff',st:8});o.push(big);
       this.tweens.add({targets:big,scale:{from:.4,to:1},duration:400,ease:'Back.Out'});
     }
-    const noHint=R.type==='read', abTop=425, bottom=R.type==='read'?950:1005;
-    const scale=clamp(Math.min((bottom-abTop)/abFullH(noHint),660/(R.rods*AB.RW+2*AB.PAD)),.6,1);
+    const noHint=R.type==='read', abTop=425, scale=AB_SCALE;
     this.ab=new Abacus(this,GW/2,abTop,R.rods,{scale,hideDigits:true,noHint});
     if(R.type==='read'){
       this.ab.set(R.target,true);this.ab.lock(true);
@@ -934,8 +941,7 @@ class Free extends Phaser.Scene{
   // --- mode 1: move the beads yourself
   buildManual(){
     const T=L(),top=268;
-    const scale=Math.min(670/(4*AB.RW+2*AB.PAD),(985-top)/abFullH(false));
-    this.ab=new Abacus(this,GW/2,top,4,{scale,onChange:v=>this.show(v)});
+    this.ab=new Abacus(this,GW/2,top,4,{scale:AB_SCALE,onChange:v=>this.show(v)});
     const vy=top+this.ab.Hpx+46;
     panel(this,GW/2-140,vy-44,280,88,0xffffff,C.line,24);
     this.valT=txt(this,GW/2,vy,'0',60,'#2a9fc4');
@@ -949,18 +955,17 @@ class Free extends Phaser.Scene{
   // --- mode 2: type a number, watch the sempoa set it step by step
   buildInput(){
     const T=L(),top=262; this.entry='';
-    const scale=Math.min(670/(4*AB.RW+2*AB.PAD),(722-top)/abFullH(true));
-    this.ab=new Abacus(this,GW/2,top,4,{scale,noHint:true});
+    this.ab=new Abacus(this,GW/2,top,4,{scale:AB_SCALE,noHint:true});
     this.ab.lock(true); // in this mode the beads only move by themselves
-    this.capT=txt(this,GW/2,top+this.ab.Hpx+30,T.typeHint,25,'#2f7f93',{wrap:640});
-    panel(this,GW/2-170,800,340,86,0xffffff,0xffd0b5,22);
-    this.inT=txt(this,GW/2,843,'_',58,'#ff6a1a');
+    this.capT=txt(this,GW/2,top+this.ab.Hpx+28,T.typeHint,23,'#2f7f93',{wrap:640});
+    panel(this,GW/2-170,848,340,72,0xffffff,0xffd0b5,20);
+    this.inT=txt(this,GW/2,884,'_',50,'#ff6a1a');
     const rows=[['1','2','3','4'],['5','6','7','8'],['9','0','⌫','C']];
     rows.forEach((row,ri)=>row.forEach((k,ci)=>{
       const fn=k==='⌫'||k==='C';
-      btn(this,135+ci*150,935+ri*86,136,72,fn?0xffffff:C.blue,k,()=>this.key(k),{white:fn,textColor:fn?'#2f7f93':'#ffffff',size:36,radius:20});
+      btn(this,135+ci*150,972+ri*74,136,62,fn?0xffffff:C.blue,k,()=>this.key(k),{white:fn,textColor:fn?'#2f7f93':'#ffffff',size:34,radius:18});
     }));
-    this.goBtn=btn(this,GW/2,1200,440,84,C.orange,T.show,()=>this.go(),{size:34});
+    this.goBtn=btn(this,GW/2,1196,440,76,C.orange,T.show,()=>this.go(),{size:32});
   }
   key(k){
     if(this.ab.animating) return;
