@@ -688,7 +688,7 @@ class Challenge extends Phaser.Scene{
     this.burst=confetti(this);
     this.progG=this.add.graphics(); this.timerG=this.add.graphics();
     this.rounds=PLAN.map(makeRound); this.ri=0; this.score=0; this.combo=1; this.streak=0; this.best=0; this.correct=0; this.results=[];
-    this.objs=[]; this.load();
+    this.objs=[]; this.loadRound();
   }
   drawProgress(){
     const g=this.progG;g.clear();const w=(GW-120-9*8)/10;
@@ -696,7 +696,7 @@ class Challenge extends Phaser.Scene{
       g.fillStyle(col,1).fillRoundedRect(60+k*(w+8),170,w,14,7);});
   }
   clear(){this.objs.forEach(o=>o.destroy());this.objs=[];if(this.ab){this.ab.destroy();this.ab=null;}if(this.sh){this.sh.destroy();this.sh=null;}}
-  load(){
+  loadRound(){
     this.clear(); const R=this.rounds[this.ri],T=L(); this.answered=false;
     this.drawProgress();
     const o=this.objs;
@@ -770,7 +770,7 @@ class Challenge extends Phaser.Scene{
       if(last){
         const b=+store.get('sempoaBest','0');if(this.score>b)store.set('sempoaBest',String(this.score));
         this.scene.start('Result',{score:this.score,correct:this.correct,best:this.best,results:this.results});
-      } else if(this.answered&&this.ri<this.rounds.length-1){this.ri++;this.load();}
+      } else if(this.answered&&this.ri<this.rounds.length-1){this.ri++;this.loadRound();}
     }});
   }
 }
