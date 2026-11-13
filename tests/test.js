@@ -2,6 +2,7 @@ const {T,runQueue,resetQueue}=require('./harness.js');
 const ok=(c,m)=>{if(!c){console.log('FAIL:',m);process.exitCode=1;}else console.log('ok  ',m);};
 const P=(id,x,y,touch=true)=>({id,x,y,wasTouch:touch});
 
+{ const b=new T.Boot(); b.create(); ok(JSON.stringify(b.canvases)===JSON.stringify(['bead0','bead1','bead2','bead3','beadBrown'])&&b.started&&b.started[0]==='Home','Boot draws the 5 sharp bead textures and opens Home'); }
 for(const lang of ['id','en']){
   T.setLang(lang); console.log('\n=== language',lang);
   // ---------- every scene builds ----------

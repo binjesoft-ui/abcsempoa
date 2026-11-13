@@ -2,7 +2,7 @@
 const fs=require('fs');
 const html=fs.readFileSync(process.argv[2]||require('path').join(__dirname,'..','index.html'),'utf8');
 let body=html.split('<script>\nfunction SEMPOA(){')[1].split('\n// wait for the engine')[0];
-body=body.replace('fontsReady.then(()=>new Phaser.Game(config));','globalThis.__T={Home,Learn,Cert,Challenge,Result,Free,Abacus,makeQ,PPLAN,LESSONS,I18N,setLang:l=>{LANG=l}};');
+body=body.replace('fontsReady.then(()=>new Phaser.Game(config));','globalThis.__T={Boot,Home,Learn,Cert,Challenge,Result,Free,Abacus,makeQ,PPLAN,LESSONS,I18N,setLang:l=>{LANG=l}};');
 body=body.replace(/\}\s*$/,''); // drop closing brace of SEMPOA
 
 let queue=[];
@@ -37,8 +37,8 @@ class Scene{
     this.time={get now(){return S._time;},delayedCall:(ms,fn)=>{const ev={at:S._time+ms,fn,dead:false,remove(){this.dead=true;}};queue.push(ev);return ev;}};
     this.input={_h:{},on(ev,fn){(this._h[ev]=this._h[ev]||[]).push(fn)},off(ev,fn){this._h[ev]=(this._h[ev]||[]).filter(f=>f!==fn)}};
     this.events={once(){},on(){}};
-    this.cameras={main:{setBackgroundColor(){},shake(){}}};
-    this.textures={exists:()=>true,addImage(){}};
+    this.cameras={main:{setBackgroundColor(){return this},setZoom(){return this},centerOn(){return this},shake(){}}};
+    this.textures={exists:()=>true,addImage(){},createCanvas:(k)=>{(S.canvases=S.canvases||[]).push(k);return mkObj({getContext:()=>mkObj()});}};
     this.sys={isActive:()=>true};
     this.scene={start:(k,d)=>{this.started=[k,d];},restart:(d)=>{this.restarted=d;}};
   }
@@ -51,6 +51,7 @@ function runQueue(scene,ms=60000){ // advance fake time, running timers in order
 }
 global.Phaser={Scene,Display:{Color:{ValueToColor:()=>({darken:()=>({color:0})})}},AUTO:0,Scale:{FIT:0,CENTER_BOTH:0}};
 global.window=global; global.document={fonts:null,getElementById:()=>null};
+global.Image=class{set src(v){this.onload&&this.onload();}};
 global.localStorage={getItem:()=>null,setItem:()=>{}};
 new Function(body)();
 module.exports={T:global.__T,runQueue,resetQueue:()=>{queue=[]}};

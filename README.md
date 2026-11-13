@@ -54,7 +54,7 @@ tests/              headless checks (run: node tests/test.js)
 
 ## Version
 
-2.0.0 — made by **Binjesoft**.
+2.1.0 — made by **Binjesoft**.
 
 ## Notes
 
