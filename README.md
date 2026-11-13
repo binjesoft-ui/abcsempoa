@@ -30,10 +30,12 @@ python3 -m http.server 8000
 ## Controls / Kontrol
 
 - **Push** a bead toward the middle bar to count it, **pull** it away to remove it.
-- **Pinch 🤏 (jepit)** — for 6–9, the top bead and bottom beads must move **at the same time**:
-  - Touch: two fingers together (one pulls the top bead down, one pushes bottom beads up).
-  - Mouse: drag one bead **across the bar** onto the other side.
-- Moving them one by one counts as a wrong move in lessons and the challenge.
+- Touch **anywhere on a rod**: above the bar grabs the top bead, below it grabs the nearest bottom bead.
+- **Pinch 🤏 (jepit)** — for 6–9, the top bead and bottom beads must move **together**:
+  - Two fingers: one pulls the top bead down, one pushes bottom beads up. Fingers don't have to be perfectly in sync — moves within about half a second count as one pinch.
+  - One finger or mouse: slide the top bead down **through the bar** onto the bottom bead you want.
+- Moving them one by one (with a pause between) counts as a wrong move in lessons and the challenge.
+- **Bead colour / Warna manik:** switch between 🌈 colourful beads and 🟤 classic brown beads on the home screen or in Free Play.
 
 ## Files
 
@@ -45,5 +47,5 @@ assets/mascot.png   the mascot as a PNG
 
 ## Notes
 
-- Language choice, sound setting and best score are saved in the browser (`localStorage`).
+- Language, bead colour, sound setting and best score are saved in the browser (`localStorage`).
 - Add/take-away rounds currently avoid "mixed" moves (top bead in while bottom beads go out, e.g. 4 + 1 = 5). Those "friends of 5" lessons are a good next step.

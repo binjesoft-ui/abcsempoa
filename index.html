@@ -86,7 +86,8 @@ const I18N={
   instrAdd:(a,b)=>`The abacus shows ${a}.\nAdd +${b} and show the answer!`,
   instrSub:(a,b)=>`The abacus shows ${a}.\nTake away −${b} and show the answer!`,
   places:['Ones','Tens','Hundreds','Thousands'],
-  hint:'👆 Push to the bar · 👇 Pull away · 🤏 6–9: pinch together',
+  hint:'👆 Push to the bar · 👇 Pull away · 🤏 6–9: two fingers together, or slide the top bead down through the bar',
+  beadsColor:'Beads: 🌈 Colorful', beadsBrown:'Beads: 🟤 Brown',
   praise:['Awesome! 🎉','Bead-tastic! 🧮','Nailed it! 🎯','Super star! 🌟','Abacus pro! 🚀'],
   cheer:['So close! 💪','Nice try! 🙂',"Let's learn it! 📘"],
   answerIs:n=>`The answer is ${n}.`,
@@ -119,7 +120,8 @@ const I18N={
   instrAdd:(a,b)=>`Sempoa menunjukkan ${a}.\nTambah +${b}, lalu tunjukkan hasilnya!`,
   instrSub:(a,b)=>`Sempoa menunjukkan ${a}.\nKurangi −${b}, lalu tunjukkan hasilnya!`,
   places:['Satuan','Puluhan','Ratusan','Ribuan'],
-  hint:'👆 Dorong ke palang · 👇 Tarik menjauh · 🤏 6–9: jepit bersamaan',
+  hint:'👆 Dorong ke palang · 👇 Tarik menjauh · 🤏 6–9: dua jari bersamaan, atau geser manik atas turun melewati palang',
+  beadsColor:'Manik: 🌈 Warna-warni', beadsBrown:'Manik: 🟤 Cokelat',
   praise:['Hebat! 🎉','Keren! 😎','Tepat sekali! 🎯','Bintang sempoa! 🌟','Mantap! 🚀'],
   cheer:['Hampir! 💪','Ayo coba lagi! 🙂','Kita belajar, yuk! 📘'],
   answerIs:n=>`Jawabannya ${n}.`,
@@ -158,8 +160,8 @@ const LESSONS=[
   task:{en:'👉 Make 5 with only the top bead.',id:'👉 Buat angka 5 dengan manik atas saja.'}},
  {rods:1,target:6,pinch:true,
   t:{en:'The Pinch 🤏',id:'Jepit 🤏'},
-  x:{en:'6 to 9 use the top bead AND bottom beads, moved at the SAME time like a pinch!\n📱 Two fingers: pull the top bead down and push a bottom bead up together.\n🖱️ Mouse: drag the top bead down ACROSS the bar onto the bottom bead you want.',
-     id:'6 sampai 9 memakai manik atas DAN manik bawah yang digerakkan BERSAMAAN, seperti menjepit!\n📱 Dua jari: tarik manik atas ke bawah dan dorong manik bawah ke atas bersamaan.\n🖱️ Mouse: seret manik atas ke bawah MELEWATI palang sampai ke manik bawah yang kamu mau.'},
+  x:{en:'6 to 9 use the top bead AND bottom beads, moved at the SAME time like a pinch!\n✌️ Two fingers: pull the top bead down and push a bottom bead up together.\n☝️ One finger or mouse: slide the top bead down THROUGH the bar onto the bottom bead you want.',
+     id:'6 sampai 9 memakai manik atas DAN manik bawah yang digerakkan BERSAMAAN, seperti menjepit!\n✌️ Dua jari: tarik manik atas ke bawah dan dorong manik bawah ke atas bersamaan.\n☝️ Satu jari atau mouse: geser manik atas turun MELEWATI palang sampai ke manik bawah yang kamu mau.'},
   task:{en:"👉 Make 6 in ONE pinch. One by one doesn't count!",id:'👉 Buat 6 dengan SATU jepitan. Satu per satu tidak dihitung!'}},
  {rods:1,target:8,pinch:true,
   t:{en:'Pinch Some More',id:'Jepit Lagi'},
@@ -249,6 +251,12 @@ function topBar(scene,title,o={}){
     const lb=btn(scene,GW-196,y,130,62,0xffffff,LANG==='id'?'🌐 ID':'🌐 EN',()=>{LANG=LANG==='id'?'en':'id';store.set('sempoaLang',LANG);scene.scene.restart(o.langData||{})},{white:true,size:26,textColor:'#24323d'});
   }
 }
+function beadToggle(scene,x,y,w,onChange){
+  const label=()=>BEADS==='brown'?L().beadsBrown:L().beadsColor;
+  const b=btn(scene,x,y,w,70,0xffffff,label(),()=>{BEADS=BEADS==='brown'?'color':'brown';store.set('sempoaBeads',BEADS);b.label.setText(label());onChange&&onChange();},
+    {white:true,textColor:'#7a4520',size:26});
+  return b;
+}
 function confetti(scene){
   const e=scene.add.particles(0,0,'conf',{speed:{min:300,max:750},angle:{min:200,max:340},gravityY:1100,lifespan:1800,
     scale:{start:1,end:.7},rotate:{min:0,max:360},tint:[0xff6a1a,0x4cc3e8,0xffd23f,0x2ec27e,0xff4d6d,0xb36bd6],emitting:false}).setDepth(100);
@@ -273,19 +281,27 @@ function sheet(scene,{kind,emoji,title,body,btnLabel,onBtn}){
 }
 
 // ---------------------------------------------------------------- Abacus (soroban)
-const AB={PAD:22,BW:112,BH:46,BEAM_TOP:130,BEAM_H:18,ROD_H:416,RW:140};
-const H_ON=AB.BEAM_TOP-AB.BH-2, H_OFF=8, E_ACT0=AB.BEAM_TOP+AB.BEAM_H+2, E_FREE0=AB.ROD_H-8-4*AB.BH;
+// Bigger beads (140 x 56) on wider rods (160) so small fingers can grab them easily.
+const AB={PAD:22,BW:140,BH:56,BEAM_H:20,RW:160,TRAVEL:84};
+const H_OFF=8, H_ON=H_OFF+AB.TRAVEL;
+AB.BEAM_TOP=H_ON+AB.BH+2;
+const E_ACT0=AB.BEAM_TOP+AB.BEAM_H+2, E_FREE0=E_ACT0+AB.TRAVEL;
+AB.ROD_H=E_FREE0+4*AB.BH+8;
+const abFullH=noHint=>AB.PAD+AB.ROD_H+96+(noHint?0:60);   // unscaled height of a whole abacus
+const PINCH_GRACE=450; // ms: top + bottom moves this close together still count as one pinch
+let BEADS=store.get('sempoaBeads','color');               // 'color' | 'brown'
 const yH=on=>AB.PAD+(on?H_ON:H_OFF);
 const yE=(k,on)=>AB.PAD+(on?E_ACT0:E_FREE0)+k*AB.BH;
 const BEAD_COLORS=[[0xff9bbb,0xe04877],[0xffdc6a,0xd99a00],[0x7fd4fb,0x1f93c9],[0x94e6a6,0x34a250]];
+const BEAD_BROWN=[0xd0935a,0x7a4520];
 
 class Abacus{
   constructor(scene,cx,top,rods,opts={}){
     Object.assign(this,{s:scene,n:rods,opts,locked:false,fingers:0,drags:new Map(),busy:new Set(),dead:false});
     this.k=opts.scale||1;
     this.state=Array.from({length:rods},()=>({h:0,e:0}));
-    const W=rods*AB.RW+2*AB.PAD, H=AB.PAD+AB.ROD_H+92;
-    this.W=W; this.Hpx=(H+(opts.noHint?0:56))*this.k;
+    const W=rods*AB.RW+2*AB.PAD, H=AB.PAD+AB.ROD_H+96;
+    this.W=W; this.Hpx=abFullH(opts.noHint)*this.k;
     const c=this.c=scene.add.container(cx-W*this.k/2,top).setScale(this.k);
     const g=scene.add.graphics();
     g.fillStyle(C.woodD,1).fillRoundedRect(0,10,W,H,30);
@@ -301,16 +317,23 @@ class Abacus{
     g2.fillStyle(C.woodD,1).fillRect(AB.PAD-8,AB.PAD+AB.BEAM_TOP,W-2*AB.PAD+16,AB.BEAM_H);
     this.rodX.forEach(x=>g2.fillStyle(0xffe9b0,1).fillCircle(x,AB.PAD+AB.BEAM_TOP+AB.BEAM_H/2,4));
     for(let r=0;r<rods;r++){
-      const x=this.rodX[r],place=rods-1-r,tex='bead'+(place%4);
-      const mk=(kind,k)=>{const im=scene.add.image(x,0,tex).setOrigin(.5,0).setInteractive({useHandCursor:true});
-        im.on('pointerdown',p=>this.grab(p,r,kind,k));c.add(im);return im;};
-      const h=mk('h',0),e=[0,1,2,3].map(k=>mk('e',k));
+      const x=this.rodX[r],place=rods-1-r,tex=BEADS==='brown'?'beadBrown':'bead'+(place%4);
+      const mk=()=>{const im=scene.add.image(x,0,tex).setOrigin(.5,0);c.add(im);return im;};
+      const h=mk(),e=[0,1,2,3].map(mk);
       this.beads.push({h,e});
-      const pt=txt(scene,x,AB.PAD+AB.ROD_H+30,L().places[place],22,'#ffffff');
-      const dt=txt(scene,x,AB.PAD+AB.ROD_H+66,'0',34,'#ffe9b0');
+      // Big invisible touch zones: anywhere above the bar grabs the top bead,
+      // anywhere below it grabs the nearest bottom bead.
+      const zH=scene.add.zone(x,AB.PAD+AB.BEAM_TOP/2,AB.RW,AB.BEAM_TOP).setInteractive({useHandCursor:true});
+      zH.on('pointerdown',p=>this.grab(p,r,'h',0));
+      const eTop=AB.PAD+AB.BEAM_TOP+AB.BEAM_H, eH=AB.ROD_H-AB.BEAM_TOP-AB.BEAM_H;
+      const zE=scene.add.zone(x,eTop+eH/2,AB.RW,eH).setInteractive({useHandCursor:true});
+      zE.on('pointerdown',p=>this.grab(p,r,'e',this.nearestEarth(r,p)));
+      c.add([zH,zE]);
+      const pt=txt(scene,x,AB.PAD+AB.ROD_H+30,L().places[place],24,'#ffffff');
+      const dt=txt(scene,x,AB.PAD+AB.ROD_H+68,'0',38,'#ffe9b0');
       c.add([pt,dt]);this.placeT.push(pt);this.digitT.push(dt);
     }
-    if(!opts.noHint){this.hintT=txt(scene,W/2,H+36,L().hint,20,'#7b8a95',{body:true,wrap:Math.max(W,560)});c.add(this.hintT);}
+    if(!opts.noHint){this.hintT=txt(scene,W/2,H+38,L().hint,21,'#7b8a95',{body:true,wrap:Math.max(W,600)});c.add(this.hintT);}
     this.toastT=txt(scene,W/2,-20,'',34,'#24323d',{stroke:'#ffd23f',st:12}).setAlpha(0);c.add(this.toastT);
     this.onMove=p=>this.move(p); this.onUp=p=>this.up(p);
     scene.input.on('pointermove',this.onMove);scene.input.on('pointerup',this.onUp);scene.input.on('pointerupoutside',this.onUp);
@@ -320,19 +343,34 @@ class Abacus{
   detach(){this.s.input.off('pointermove',this.onMove);this.s.input.off('pointerup',this.onUp);this.s.input.off('pointerupoutside',this.onUp);}
   destroy(){if(this.dead)return;this.dead=true;this.detach();this.c.destroy();}
   localY(p){return (p.y-this.c.y)/this.k-AB.PAD}
+  nearestEarth(r,p){ // which bottom bead is closest to the finger
+    const ly=(p.y-this.c.y)/this.k;let best=0,bd=1e9;
+    this.beads[r].e.forEach((im,k)=>{const d=Math.abs(ly-(im.y+AB.BH/2));if(d<bd){bd=d;best=k;}});
+    return best;
+  }
 
   // ---- technique (pinch) tracking ----
   // A gesture lasts from the first finger down until the last finger lifts.
   // If one gesture moved BOTH the top and bottom beads on a rod, that rod was pinched.
-  beginGesture(){if(this.fingers===0)this.gesture={};this.fingers++;}
-  record(r,bit){this.gesture[r]=(this.gesture[r]||0)|bit;}
+  // To be kind to small hands, a gesture stays open for PINCH_GRACE ms after the last finger lifts,
+  // so two fingers that don't land/lift at exactly the same moment still count as one pinch.
+  beginGesture(){
+    if(this.fingers===0){ if(this.graceT){this.graceT.remove(false);this.graceT=null;} else this.gesture={}; }
+    this.fingers++;
+  }
+  record(r,bit){
+    const was=this.gesture[r]||0; this.gesture[r]=was|bit;
+    if(was!==3&&this.gesture[r]===3){this.pinched[r]=true;sfx.pinch();this.toast(L().pinch);}
+  }
   endGesture(){
     this.fingers=Math.max(0,this.fingers-1); if(this.fingers>0) return;
-    let pinched=false;
-    for(const r in this.gesture) if(this.gesture[r]===3){this.pinched[r]=true;pinched=true;}
-    if(pinched){sfx.pinch();this.toast(L().pinch);}
+    if(this.graceT) this.graceT.remove(false);
+    this.graceT=this.s.time.delayedCall(PINCH_GRACE,()=>{this.graceT=null;this.gesture={};});
   }
-  resetTechnique(){this.pinched={};this.fingers=0;this.gesture={};this.startState=this.state.map(s=>({...s}));}
+  resetTechnique(){
+    if(this.graceT){this.graceT.remove(false);this.graceT=null;}
+    this.pinched={};this.fingers=this.drags?this.drags.size:0;this.gesture={};this.startState=this.state.map(s=>({...s}));
+  }
   techniqueErrors(){ // place indexes where top+bottom both changed but not in one pinch
     const out=[];
     this.state.forEach((s,r)=>{const s0=this.startState[r];if(s.h!==s0.h&&s.e!==s0.e&&!this.pinched[r])out.push(this.n-1-r);});
@@ -368,17 +406,20 @@ class Abacus{
     const s=this.state[d.r],b=this.beads[d.r];
     d.moved=clamp((p.y-d.y0)/this.k*d.sign,0,d.travel);
     d.group.forEach((im,i)=>im.y=d.bases[i]+d.moved*d.sign);
-    // One-pointer pinch shortcut is for MOUSE only (touch uses a real two-finger pinch),
-    // and the pointer must travel deep past the bar so an ordinary push never triggers it.
-    if(!d.pushingIn||d.touch) return;
+    // One-finger pinch: slide the TOP bead down THROUGH the bar into the bottom beads (touch + mouse).
+    // The reverse (bottom bead up into the top area) is mouse-only, because fingers overshoot upward.
+    // Both need the pointer to go deep past the bar, so an ordinary push never triggers them.
+    if(!d.pushingIn) return;
     const rel=this.localY(p);
-    if(d.kind==='e'&&!s.h){ // bottom bead pushed up ACROSS the bar -> bring the top bead down too
-      const want=rel<H_OFF+AB.BH;            // up into the top bead's resting spot
+    if(d.kind==='e'&&!s.h&&!d.touch){ // bottom bead pushed up ACROSS the bar -> bring the top bead down too
+      const pushed=(d.y0-p.y)/this.k;
+      const want=rel<H_OFF+AB.BH && pushed>AB.TRAVEL+AB.BH*1.5; // deep into the top area, on purpose
       if(want!==d.crossH){d.crossH=want;this.preview(d,b.h,want,yH(want));}
     }
     if(d.kind==='h'&&s.e<4){ // top bead pulled down ACROSS the bar -> push bottom beads up to the one under the pointer
       let kk=-1;
-      if(rel>E_FREE0) kk=Math.max(s.e,Math.min(3,Math.floor((rel-E_FREE0)/AB.BH))); // down among the free bottom beads
+      const pulled=(p.y-d.y0)/this.k;
+      if(rel>E_FREE0 && pulled>AB.TRAVEL+AB.BH*1.5) kk=Math.max(s.e,Math.min(3,Math.floor((rel-E_FREE0)/AB.BH))); // a long slide down among the free bottom beads
       if(kk!==d.crossK){d.crossK=kk;
         b.e.forEach((im,i)=>{if(i<s.e)return;const on=kk>=0&&i<=kk;this.preview(d,im,on,yE(i,on));});}
     }
@@ -521,14 +562,14 @@ function kidSVG(){
 class Boot extends Phaser.Scene{
   constructor(){super('Boot')}
   create(){
-    BEAD_COLORS.forEach(([light,dark],i)=>{
+    [...BEAD_COLORS,BEAD_BROWN].forEach(([light,dark],i)=>{
       const g=this.make.graphics({x:0,y:0,add:false}),w=AB.BW,h=AB.BH;
       const P=a=>a.map(([x,y])=>({x,y}));
       g.fillStyle(dark,1).fillPoints(P([[w*.2,1],[w*.8,1],[w-1,h/2],[w*.8,h-1],[w*.2,h-1],[1,h/2]]),true);
       g.fillStyle(light,1).fillPoints(P([[w*.2,1],[w*.8,1],[w-1,h/2],[1,h/2]]),true);
       g.fillStyle(0xffffff,.5).fillEllipse(w/2,h*.2,w*.5,h*.16);
       g.lineStyle(2,Phaser.Display.Color.ValueToColor(dark).darken(15).color,1).strokePoints(P([[w*.2,1],[w*.8,1],[w-1,h/2],[w*.8,h-1],[w*.2,h-1],[1,h/2]]),true);
-      g.generateTexture('bead'+i,w,h);g.destroy();
+      g.generateTexture(i<BEAD_COLORS.length?'bead'+i:'beadBrown',w,h);g.destroy();
     });
     const g=this.make.graphics({add:false});g.fillStyle(0xffffff,1).fillRect(0,0,14,9);g.generateTexture('conf',14,9);g.destroy();
     const img=new Image();
@@ -571,8 +612,9 @@ class Home extends Phaser.Scene{
     card(700,C.blue,'📚',T.learn,T.learnSub,()=>this.scene.start('Learn',{i:0}));
     card(875,C.orange,'🎮',T.play,T.playSub,()=>this.scene.start('Challenge'));
     card(1050,C.green,'🎨',T.free,T.freeSub,()=>this.scene.start('Free'));
+    beadToggle(this,GW/2,1185,380);
     const best=+store.get('sempoaBest','0');
-    if(best) txt(this,GW/2,1200,T.best(best),24,'#8c99a3',{body:true});
+    if(best) txt(this,GW/2,1240,T.best(best),22,'#8c99a3',{body:true});
   }
 }
 
@@ -596,17 +638,17 @@ class Learn extends Phaser.Scene{
     const pg=panel(this,left,top,w,h,0xf3fbfe,0xcdeefa); pg.setDepth(-1);
     const owl=txt(this,left+60,top+64,'🦉',66);this.tweens.add({targets:owl,y:top+54,yoyo:true,repeat:-1,duration:900,ease:'Sine.InOut'});
     // abacus, scaled to fit
-    const abTop=top+h+60, room=1040-abTop, fullH=AB.PAD+AB.ROD_H+92+56;
-    const scale=clamp(room/fullH,.62,1);
+    const abTop=top+h+56, room=1095-abTop;
+    const scale=clamp(Math.min(room/abFullH(false),660/(Ls.rods*AB.RW+2*AB.PAD)),.55,1);
     this.ab=new Abacus(this,GW/2,abTop,Ls.rods,{scale,glow:Ls.glow,onChange:v=>this.check(v)});
     if(Ls.start) this.ab.set(Ls.start,true);
     // value
-    const vy=Math.min(abTop+this.ab.Hpx+46,1100);
-    this.valBg=panel(this,GW/2-110,vy-40,220,80,0xffffff,C.line,20);
-    this.valT=txt(this,GW/2,vy,'0',52,'#2a9fc4');
-    this.wordT=txt(this,GW/2,vy+60,'',22,'#8c99a3',{body:true,wrap:600});
+    const vy=Math.min(abTop+this.ab.Hpx+18,1128);
+    this.valBg=panel(this,60,vy-32,170,64,0xffffff,C.line,18);
+    this.valT=txt(this,145,vy,'0',44,'#2a9fc4');
+    this.wordT=txt(this,250,vy,'',22,'#8c99a3',{body:true,ox:0,wrap:410,align:'left'});
     // buttons
-    const by=1200;
+    const by=1215;
     btn(this,Ls.pinch?200:GW/2,by,250,80,0xffffff,T.reset,()=>{if(this.sheet)return;this.ab.set(Ls.start||0);this.show(this.ab.value())},{white:true,textColor:'#2f7f93',size:28});
     if(Ls.pinch) btn(this,520,by,280,80,C.purple,T.showMe,()=>{if(this.sheet)return;this.ab.demo(Ls.target)},{size:28});
     this.done=false; this.show(this.ab.value());
@@ -716,8 +758,9 @@ class Challenge extends Phaser.Scene{
       const big=txt(this,GW/2,370,lines[1],76,'#ff6a1a',{stroke:'#ffffff',st:8});o.push(big);
       this.tweens.add({targets:big,scale:{from:.4,to:1},duration:400,ease:'Back.Out'});
     }
-    const scale=R.rods===1?.92:.9;
-    this.ab=new Abacus(this,GW/2,440,R.rods,{scale,hideDigits:true,noHint:R.type==='read'});
+    const noHint=R.type==='read', abTop=425, bottom=R.type==='read'?950:1005;
+    const scale=clamp(Math.min((bottom-abTop)/abFullH(noHint),660/(R.rods*AB.RW+2*AB.PAD)),.6,1);
+    this.ab=new Abacus(this,GW/2,abTop,R.rods,{scale,hideDigits:true,noHint});
     if(R.type==='read'){
       this.ab.set(R.target,true);this.ab.lock(true);
       R.options.forEach((v,k)=>{const cols=[C.blue,C.purple,C.green,0xff8c42];
@@ -807,13 +850,16 @@ class Free extends Phaser.Scene{
   create(){
     drawBg(this); topBar(this,'',{lang:true}); const T=L();
     txt(this,GW/2,210,T.freeInstr,28,'#24323d',{wrap:620});
-    this.ab=new Abacus(this,GW/2,300,4,{scale:1,onChange:v=>this.show(v)});
-    const vy=300+this.ab.Hpx+60;
-    panel(this,GW/2-150,vy-48,300,96,0xffffff,C.line,24);
-    this.valT=txt(this,GW/2,vy,'0',64,'#2a9fc4');
-    this.wordT=txt(this,GW/2,vy+80,'',24,'#8c99a3',{body:true,wrap:620});
-    btn(this,200,vy+170,250,82,0xffffff,T.clear,()=>{this.ab.set(0);this.show(0)},{white:true,textColor:'#2f7f93',size:28});
-    btn(this,500,vy+170,300,82,C.orange,T.surprise,()=>{const n=rnd(1,9999);this.ab.set(0,true);this.ab.animateTo(n,()=>this.show(n))},{size:28});
+    const scale=Math.min(1,670/(4*AB.RW+2*AB.PAD));
+    this.ab=new Abacus(this,GW/2,272,4,{scale,onChange:v=>this.show(v)});
+    const vy=272+this.ab.Hpx+46;
+    panel(this,GW/2-140,vy-44,280,88,0xffffff,C.line,24);
+    this.valT=txt(this,GW/2,vy,'0',60,'#2a9fc4');
+    this.wordT=txt(this,GW/2,vy+70,'',24,'#8c99a3',{body:true,wrap:620});
+    const by=Math.min(vy+150,1205);
+    btn(this,130,by,210,80,0xffffff,T.clear,()=>{this.ab.set(0);this.show(0)},{white:true,textColor:'#2f7f93',size:26});
+    btn(this,360,by,220,80,C.orange,T.surprise,()=>{const n=rnd(1,9999);this.ab.set(0,true);this.ab.animateTo(n,()=>this.show(n))},{size:26});
+    beadToggle(this,592,by,230,()=>this.scene.restart()).label.setFontSize(20);
     this.show(0);
   }
   show(v){this.valT.setText(String(v));this.wordT.setText(L().words(v));}
