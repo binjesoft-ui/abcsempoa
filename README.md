@@ -25,7 +25,7 @@ python3 -m http.server 8000
 |---|---|
 | 📚 **Belajar / Learn** | 10 short lessons with Ollie the Owl: bottom beads (1), top bead (5), the pinch, tens, adding, up to 999 |
 | 🎮 **Tantangan / Challenge** | 10 rounds — build a number, read the abacus, add and take away — with timer, combo multiplier, stars and best score |
-| 🎨 **Main Bebas / Free Play** | A 4-rod abacus that shows the number in digits and words |
+| 🎨 **Main Bebas / Free Play** | **👆 Geser Manik / Move Beads:** a 4-rod abacus that shows the number in digits and words. **🔢 Ketik Angka / Type a Number:** type any number up to 9999 and watch the sempoa set it the proper way — clear first, then rod by rod from the left, with a caption for every move (push, pull, or pinch) |
 
 ## Controls / Kontrol
 
@@ -35,7 +35,7 @@ python3 -m http.server 8000
   - Two fingers: one pulls the top bead down, one pushes bottom beads up. Fingers don't have to be perfectly in sync — moves within about half a second count as one pinch.
   - One finger or mouse: slide the top bead down **through the bar** onto the bottom bead you want.
 - Moving them one by one (with a pause between) counts as a wrong move in lessons and the challenge.
-- **Bead colour / Warna manik:** switch between 🌈 colourful beads and 🟤 classic brown beads on the home screen or in Free Play.
+- **⚙️ Options / Pengaturan** (top-right on every screen): language (Indonesia / English), bead colour (🌈 colourful or 🟤 classic brown), sound on/off, and About (version, made by Binjesoft).
 
 ## Files
 
@@ -44,6 +44,10 @@ index.html          the whole game (Phaser 3, single file)
 assets/mascot.svg   the ABC Sempoa kid mascot (vector)
 assets/mascot.png   the mascot as a PNG
 ```
+
+## Version
+
+1.2.0 — made by **Binjesoft**.
 
 ## Notes
 

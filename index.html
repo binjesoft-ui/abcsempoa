@@ -24,6 +24,7 @@ function SEMPOA(){
 //  ABC Sempoa (Aku Bisa Calistung)  — Phaser 3, portrait 720 x 1280
 // =====================================================================
 const GW=720, GH=1280;
+const VERSION='1.2.0';
 const FONT="'Baloo 2', 'Nunito', Arial, sans-serif";
 const BODY="'Nunito', Arial, sans-serif";
 const C={teal:0x2f7f93,sky:0x4cc3e8,skyD:0x2a9fc4,orange:0xff6a1a,green:0x2ec27e,red:0xff4d6d,yellow:0xffd23f,
@@ -87,7 +88,13 @@ const I18N={
   instrSub:(a,b)=>`The abacus shows ${a}.\nTake away −${b} and show the answer!`,
   places:['Ones','Tens','Hundreds','Thousands'],
   hint:'👆 Push to the bar · 👇 Pull away · 🤏 6–9: two fingers together, or slide the top bead down through the bar',
-  beadsColor:'Beads: 🌈 Colorful', beadsBrown:'Beads: 🟤 Brown',
+  options:'⚙️ Settings', language:'Language', beadColor:'Bead colour', sound:'Sound', on:'🔊 On', off:'🔇 Off',
+  colorful:'🌈 Colorful', brown:'🟤 Brown', about:'About', version:v=>`Version ${v}`, madeBy:'Made by Binjesoft', close:'✔ Close',
+  restartNote:'Changing language or beads restarts the challenge.',
+  freeManual:'👆 Move Beads', freeInput:'🔢 Type a Number', typeHint:'Type a number, then tap Show it!', show:'▶ Show it!',
+  soro:{clear:'🧹 First, clear the abacus', zero:p=>`${p}: 0 → leave it empty`,
+    earth:(p,d)=>`${p}: ${d} → push up ${d} bottom bead${d>1?'s':''} 👆`, five:p=>`${p}: 5 → pull the top bead down 👇`,
+    pinch:(p,d)=>`${p}: ${d} → pinch! top bead + ${d-5} bottom bead${d>6?'s':''} 🤏`, done:n=>`Done! ✨ ${n}`},
   praise:['Awesome! 🎉','Bead-tastic! 🧮','Nailed it! 🎯','Super star! 🌟','Abacus pro! 🚀'],
   cheer:['So close! 💪','Nice try! 🙂',"Let's learn it! 📘"],
   answerIs:n=>`The answer is ${n}.`,
@@ -121,7 +128,13 @@ const I18N={
   instrSub:(a,b)=>`Sempoa menunjukkan ${a}.\nKurangi −${b}, lalu tunjukkan hasilnya!`,
   places:['Satuan','Puluhan','Ratusan','Ribuan'],
   hint:'👆 Dorong ke palang · 👇 Tarik menjauh · 🤏 6–9: dua jari bersamaan, atau geser manik atas turun melewati palang',
-  beadsColor:'Manik: 🌈 Warna-warni', beadsBrown:'Manik: 🟤 Cokelat',
+  options:'⚙️ Pengaturan', language:'Bahasa', beadColor:'Warna manik', sound:'Suara', on:'🔊 Nyala', off:'🔇 Mati',
+  colorful:'🌈 Warna-warni', brown:'🟤 Cokelat', about:'Tentang', version:v=>`Versi ${v}`, madeBy:'Dibuat oleh Binjesoft', close:'✔ Tutup',
+  restartNote:'Mengubah bahasa atau manik akan memulai ulang tantangan.',
+  freeManual:'👆 Geser Manik', freeInput:'🔢 Ketik Angka', typeHint:'Ketik angka, lalu tekan Tunjukkan!', show:'▶ Tunjukkan!',
+  soro:{clear:'🧹 Pertama, bersihkan sempoa', zero:p=>`${p}: 0 → biarkan kosong`,
+    earth:(p,d)=>`${p}: ${d} → dorong ${d} manik bawah ke atas 👆`, five:p=>`${p}: 5 → tarik manik atas ke bawah 👇`,
+    pinch:(p,d)=>`${p}: ${d} → jepit! manik atas + ${d-5} manik bawah 🤏`, done:n=>`Selesai! ✨ ${n}`},
   praise:['Hebat! 🎉','Keren! 😎','Tepat sekali! 🎯','Bintang sempoa! 🌟','Mantap! 🚀'],
   cheer:['Hampir! 💪','Ayo coba lagi! 🙂','Kita belajar, yuk! 📘'],
   answerIs:n=>`Jawabannya ${n}.`,
@@ -246,16 +259,50 @@ function topBar(scene,title,o={}){
   const y=118;
   if(o.home!==false) btn(scene,82,y,110,62,0xffffff,'🏠',()=>scene.scene.start('Home'),{white:true,size:30,textColor:'#24323d'});
   if(title) txt(scene,GW/2,y,title,30,'#2a9fc4');
-  const mb=btn(scene,GW-72,y,90,62,0xffffff,muted?'🔇':'🔊',()=>{muted=!muted;store.set('sempoaMute',muted?'1':'0');mb.label.setText(muted?'🔇':'🔊')},{white:true,size:28,textColor:'#24323d'});
-  if(o.lang){
-    const lb=btn(scene,GW-196,y,130,62,0xffffff,LANG==='id'?'🌐 ID':'🌐 EN',()=>{LANG=LANG==='id'?'en':'id';store.set('sempoaLang',LANG);scene.scene.restart(o.langData||{})},{white:true,size:26,textColor:'#24323d'});
-  }
+  optionsButton(scene,o.data||{},o.note);
+  if(o.data&&o.data._opts) openOptions(scene,o.data,o.note);
 }
-function beadToggle(scene,x,y,w,onChange){
-  const label=()=>BEADS==='brown'?L().beadsBrown:L().beadsColor;
-  const b=btn(scene,x,y,w,70,0xffffff,label(),()=>{BEADS=BEADS==='brown'?'color':'brown';store.set('sempoaBeads',BEADS);b.label.setText(label());onChange&&onChange();},
-    {white:true,textColor:'#7a4520',size:26});
-  return b;
+function optionsButton(scene,data,note){
+  return btn(scene,GW-82,118,110,62,0xffffff,'⚙️',()=>openOptions(scene,data,note),{white:true,size:30,textColor:'#24323d'});
+}
+// a row of 2+ toggle buttons; the active one is filled teal
+function seg(scene,cx,y,w,items,h=64){
+  const n=items.length,bw=(w-(n-1)*12)/n;
+  return items.map((it,i)=>btn(scene,cx-w/2+bw/2+i*(bw+12),y,bw,h,it.active?C.teal:0xffffff,it.label,it.active?null:it.cb,
+    {white:!it.active,textColor:it.active?'#ffffff':'#2f7f93',size:it.size||24}));
+}
+// ⚙️ Options: language, bead colour, sound, and About (made by Binjesoft + version)
+function openOptions(scene,data={},note){
+  if(scene._optC){scene._optC.destroy();scene._optC=null;}
+  const T=L(),c=scene.add.container(0,0).setDepth(300);scene._optC=c;
+  const clean={...data};delete clean._opts;
+  const dim=scene.add.rectangle(GW/2,GH/2,GW,GH,0x1b2a33,.5).setInteractive();c.add(dim);
+  const w=620,x0=(GW-w)/2,top=170,h=960;
+  c.add(panel(scene,x0,top+10,w,h,0xd99a52,null,36));c.add(panel(scene,x0,top,w,h,C.paper,0xffd59a,36));
+  c.add(txt(scene,GW/2,top+52,T.options,40,'#2f7f93'));
+  const apply=restart=>{ if(restart) scene.scene.restart({...clean,_opts:true}); else openOptions(scene,data,note); };
+  let y=top+122;
+  const row=(label,items)=>{c.add(txt(scene,x0+44,y,label,26,'#24323d',{ox:0}));y+=56;seg(scene,GW/2,y,w-88,items).forEach(b=>c.add(b));y+=82;};
+  row('🌐 '+T.language,[
+    {label:'Indonesia',active:LANG==='id',cb:()=>{LANG='id';store.set('sempoaLang','id');apply(true);}},
+    {label:'English',active:LANG==='en',cb:()=>{LANG='en';store.set('sempoaLang','en');apply(true);}}]);
+  row('🧮 '+T.beadColor,[
+    {label:T.colorful,active:BEADS!=='brown',cb:()=>{BEADS='color';store.set('sempoaBeads','color');apply(true);}},
+    {label:T.brown,active:BEADS==='brown',cb:()=>{BEADS='brown';store.set('sempoaBeads','brown');apply(true);}}]);
+  row('🎵 '+T.sound,[
+    {label:T.on,active:!muted,cb:()=>{muted=false;store.set('sempoaMute','0');apply(false);}},
+    {label:T.off,active:muted,cb:()=>{muted=true;store.set('sempoaMute','1');apply(false);}}]);
+  if(note){c.add(txt(scene,GW/2,y-22,note,19,'#8c99a3',{body:true,wrap:w-80}));y+=24;}
+  const g=scene.add.graphics();g.lineStyle(3,C.line,1).lineBetween(x0+40,y,x0+w-40,y);c.add(g);y+=40;
+  c.add(txt(scene,x0+44,y,'ℹ️ '+T.about,26,'#24323d',{ox:0}));y+=36;
+  c.add(panel(scene,x0+34,y,w-68,220,0xf3fbfe,0xcdeefa,26));
+  if(scene.textures.exists('kid')) c.add(scene.add.image(x0+120,y+112,'kid').setScale(.29));
+  c.add(txt(scene,x0+214,y+50,'ABC Sempoa',40,'#ff6a1a',{ox:0}));
+  c.add(txt(scene,x0+216,y+100,T.version(VERSION),24,'#2f7f93',{ox:0,body:true}));
+  c.add(txt(scene,x0+216,y+140,T.madeBy,24,'#24323d',{ox:0,body:true}));
+  c.add(txt(scene,x0+216,y+180,'© 2026 Binjesoft',20,'#8c99a3',{ox:0,body:true}));
+  c.add(btn(scene,GW/2,top+h-62,300,80,C.orange,T.close,()=>{c.destroy();scene._optC=null;},{size:30}));
+  c.setAlpha(0);scene.tweens.add({targets:c,alpha:1,duration:180});
 }
 function confetti(scene){
   const e=scene.add.particles(0,0,'conf',{speed:{min:300,max:750},angle:{min:200,max:340},gravityY:1100,lifespan:1800,
@@ -459,6 +506,35 @@ class Abacus{
     const step=()=>{if(this.dead)return;if(r>=this.n){this.resetTechnique();cb&&cb();return;}
       const d=+s[r];this.state[r]={h:d>=5?1:0,e:d%5};this.update();sfx.clack();r++;this.s.time.delayedCall(380,step);};
     step();}
+  // Set a number the way a sempoa teacher would: clear first, then rod by rod from the left,
+  // pushing bottom beads (1-4), pulling the top bead (5), or pinching both together (6-9).
+  sorobanTo(n,onStep,done){
+    if(this.animating) return; this.animating=true;
+    const wasLocked=this.locked; this.lock(true);
+    const S=L().soro,digits=String(n).padStart(this.n,'0').slice(-this.n),steps=[];
+    if(this.value()>0) steps.push({t:S.clear,wait:900,run:()=>{this.state.forEach(st=>{st.h=0;st.e=0;});this.update();sfx.clack();}});
+    let started=false;
+    for(let r=0;r<this.n;r++){
+      const d=+digits[r],place=this.n-1-r;
+      if(!started&&d===0&&r<this.n-1) continue;   // skip leading zeros
+      started=true;
+      const p=L().places[place];
+      const t=d===0?S.zero(p):d<5?S.earth(p,d):d===5?S.five(p):S.pinch(p,d);
+      steps.push({t,place,wait:d===0?750:1250,run:()=>{
+        this.state[r]={h:d>=5?1:0,e:d%5};this.update();
+        if(d) sfx.clack(); if(d>5){sfx.pinch();this.toast(L().pinch);} }});
+    }
+    steps.push({t:S.done(n),wait:10,run:()=>{sfx.good();}});
+    let i=0;
+    const next=()=>{
+      if(this.dead) return;
+      if(i>=steps.length){this.opts.glow=[];this.update();this.animating=false;this.lock(wasLocked);this.resetTechnique();done&&done();return;}
+      const st=steps[i++];this.opts.glow=st.place!==undefined?[st.place]:[];
+      st.run();this.update();onStep&&onStep(st.t);
+      this.s.time.delayedCall(st.wait,next);
+    };
+    next();
+  }
   demo(n){ // show a pinch: all beads of each rod move at the same time
     if(this.demoing) return; this.demoing=true;
     const saved=this.state.map(s=>({...s})),wasLocked=this.locked; this.locked=true;
@@ -583,8 +659,8 @@ class Boot extends Phaser.Scene{
 // ---------------------------------------------------------------- HOME
 class Home extends Phaser.Scene{
   constructor(){super('Home')}
-  create(){
-    drawBg(this); topBar(this,'',{home:false,lang:true});
+  create(data){
+    drawBg(this); topBar(this,'',{home:false,data:data||{}});
     const T=L();
     // ---- ABC Sempoa logo ----
     if(this.textures.exists('kid')){
@@ -612,9 +688,8 @@ class Home extends Phaser.Scene{
     card(700,C.blue,'📚',T.learn,T.learnSub,()=>this.scene.start('Learn',{i:0}));
     card(875,C.orange,'🎮',T.play,T.playSub,()=>this.scene.start('Challenge'));
     card(1050,C.green,'🎨',T.free,T.freeSub,()=>this.scene.start('Free'));
-    beadToggle(this,GW/2,1185,380);
     const best=+store.get('sempoaBest','0');
-    if(best) txt(this,GW/2,1240,T.best(best),22,'#8c99a3',{body:true});
+    if(best) txt(this,GW/2,1195,T.best(best),22,'#8c99a3',{body:true});
   }
 }
 
@@ -623,7 +698,7 @@ class Learn extends Phaser.Scene{
   constructor(){super('Learn')}
   create(data){
     this.i=data.i||0; const Ls=LESSONS[this.i], T=L();
-    drawBg(this); topBar(this,T.lesson(this.i+1,LESSONS.length),{lang:true,langData:{i:this.i}});
+    drawBg(this); topBar(this,T.lesson(this.i+1,LESSONS.length),{data:{...data,i:this.i}});
     this.burst=confetti(this);
     // step dots
     const n=LESSONS.length,gap=54,x0=GW/2-(n-1)*gap/2;
@@ -721,16 +796,17 @@ const TIME=30;
 
 class Challenge extends Phaser.Scene{
   constructor(){super('Challenge')}
-  create(){
+  create(data){
     drawBg(this); const T=L();
     btn(this,82,118,110,62,0xffffff,'🏠',()=>this.scene.start('Home'),{white:true,size:30,textColor:'#24323d'});
     panel(this,170,90,200,58,0xffffff,C.line,29); this.scoreT=txt(this,270,119,'⭐ 0',28,'#24323d');
     panel(this,385,90,160,58,0xffffff,0xffd0b5,29); this.comboT=txt(this,465,119,'🔥 x1',28,'#e0520a');
-    const mb=btn(this,GW-72,118,90,62,0xffffff,muted?'🔇':'🔊',()=>{muted=!muted;store.set('sempoaMute',muted?'1':'0');mb.label.setText(muted?'🔇':'🔊')},{white:true,size:28,textColor:'#24323d'});
+    optionsButton(this,{},T.restartNote);
     this.burst=confetti(this);
     this.progG=this.add.graphics(); this.timerG=this.add.graphics();
     this.rounds=PLAN.map(makeRound); this.ri=0; this.score=0; this.combo=1; this.streak=0; this.best=0; this.correct=0; this.results=[];
     this.objs=[]; this.loadRound();
+    if(data&&data._opts) openOptions(this,data,T.restartNote);
   }
   drawProgress(){
     const g=this.progG;g.clear();const w=(GW-120-9*8)/10;
@@ -822,7 +898,7 @@ class Challenge extends Phaser.Scene{
 class Result extends Phaser.Scene{
   constructor(){super('Result')}
   create(d){
-    drawBg(this); topBar(this,'',{lang:true,langData:d}); const T=L();
+    drawBg(this); topBar(this,'',{data:d}); const T=L();
     txt(this,GW/2,200,T.results,30,'#2a9fc4');
     const st=d.correct>=8?3:d.correct>=6?2:d.correct>=3?1:0;
     txt(this,GW/2,265,d.correct===10?T.perfect:T.endTitles[st],50,'#ff6a1a');
@@ -847,22 +923,60 @@ class Result extends Phaser.Scene{
 // ---------------------------------------------------------------- FREE PLAY
 class Free extends Phaser.Scene{
   constructor(){super('Free')}
-  create(){
-    drawBg(this); topBar(this,'',{lang:true}); const T=L();
-    txt(this,GW/2,210,T.freeInstr,28,'#24323d',{wrap:620});
-    const scale=Math.min(1,670/(4*AB.RW+2*AB.PAD));
-    this.ab=new Abacus(this,GW/2,272,4,{scale,onChange:v=>this.show(v)});
-    const vy=272+this.ab.Hpx+46;
+  create(data){
+    data=data||{}; this.mode=data.mode||'manual';
+    drawBg(this); topBar(this,'',{data:{...data,mode:this.mode}}); const T=L();
+    seg(this,GW/2,205,620,[
+      {label:T.freeManual,active:this.mode==='manual',cb:()=>this.scene.restart({mode:'manual'}),size:26},
+      {label:T.freeInput,active:this.mode==='input',cb:()=>this.scene.restart({mode:'input'}),size:26}],70);
+    if(this.mode==='manual') this.buildManual(); else this.buildInput();
+  }
+  // --- mode 1: move the beads yourself
+  buildManual(){
+    const T=L(),top=268;
+    const scale=Math.min(670/(4*AB.RW+2*AB.PAD),(985-top)/abFullH(false));
+    this.ab=new Abacus(this,GW/2,top,4,{scale,onChange:v=>this.show(v)});
+    const vy=top+this.ab.Hpx+46;
     panel(this,GW/2-140,vy-44,280,88,0xffffff,C.line,24);
     this.valT=txt(this,GW/2,vy,'0',60,'#2a9fc4');
     this.wordT=txt(this,GW/2,vy+70,'',24,'#8c99a3',{body:true,wrap:620});
-    const by=Math.min(vy+150,1205);
-    btn(this,130,by,210,80,0xffffff,T.clear,()=>{this.ab.set(0);this.show(0)},{white:true,textColor:'#2f7f93',size:26});
-    btn(this,360,by,220,80,C.orange,T.surprise,()=>{const n=rnd(1,9999);this.ab.set(0,true);this.ab.animateTo(n,()=>this.show(n))},{size:26});
-    beadToggle(this,592,by,230,()=>this.scene.restart()).label.setFontSize(20);
+    const by=Math.min(vy+152,1205);
+    btn(this,200,by,260,82,0xffffff,T.clear,()=>{this.ab.set(0);this.show(0)},{white:true,textColor:'#2f7f93',size:28});
+    btn(this,500,by,300,82,C.orange,T.surprise,()=>{const n=rnd(1,9999);this.ab.set(0,true);this.ab.animateTo(n,()=>this.show(n))},{size:28});
     this.show(0);
   }
   show(v){this.valT.setText(String(v));this.wordT.setText(L().words(v));}
+  // --- mode 2: type a number, watch the sempoa set it step by step
+  buildInput(){
+    const T=L(),top=262; this.entry='';
+    const scale=Math.min(670/(4*AB.RW+2*AB.PAD),(722-top)/abFullH(true));
+    this.ab=new Abacus(this,GW/2,top,4,{scale,noHint:true});
+    this.ab.lock(true); // in this mode the beads only move by themselves
+    this.capT=txt(this,GW/2,top+this.ab.Hpx+30,T.typeHint,25,'#2f7f93',{wrap:640});
+    panel(this,GW/2-170,800,340,86,0xffffff,0xffd0b5,22);
+    this.inT=txt(this,GW/2,843,'_',58,'#ff6a1a');
+    const rows=[['1','2','3','4'],['5','6','7','8'],['9','0','⌫','C']];
+    rows.forEach((row,ri)=>row.forEach((k,ci)=>{
+      const fn=k==='⌫'||k==='C';
+      btn(this,135+ci*150,935+ri*86,136,72,fn?0xffffff:C.blue,k,()=>this.key(k),{white:fn,textColor:fn?'#2f7f93':'#ffffff',size:36,radius:20});
+    }));
+    this.goBtn=btn(this,GW/2,1200,440,84,C.orange,T.show,()=>this.go(),{size:34});
+  }
+  key(k){
+    if(this.ab.animating) return;
+    if(k==='⌫') this.entry=this.entry.slice(0,-1);
+    else if(k==='C') this.entry='';
+    else if(this.entry.length<4) this.entry=(this.entry+k).replace(/^0+(?=\d)/,'');
+    this.inT.setText(this.entry||'_');
+  }
+  go(){
+    if(this.ab.animating) return;
+    if(this.entry===''){this.tweens.add({targets:this.inT,x:GW/2+10,yoyo:true,repeat:2,duration:50});return;}
+    const n=+this.entry; this.goBtn.setEnabled(false);
+    this.ab.sorobanTo(n,t=>this.capT.setText(t),()=>{
+      this.capT.setText(`${L().soro.done(n)} · ${L().words(n)}`);this.goBtn.setEnabled(true);
+    });
+  }
 }
 
 // =====================================================================
