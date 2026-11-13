@@ -47,7 +47,7 @@ assets/mascot.png   the mascot as a PNG
 
 ## Version
 
-1.2.1 — made by **Binjesoft**.
+1.3.0 — made by **Binjesoft**.
 
 ## Notes
 

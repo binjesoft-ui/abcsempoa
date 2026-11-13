@@ -24,7 +24,7 @@ function SEMPOA(){
 //  ABC Sempoa (Aku Bisa Calistung)  — Phaser 3, portrait 720 x 1280
 // =====================================================================
 const GW=720, GH=1280;
-const VERSION='1.2.1';
+const VERSION='1.3.0';
 const FONT="'Baloo 2', 'Nunito', Arial, sans-serif";
 const BODY="'Nunito', Arial, sans-serif";
 const C={teal:0x2f7f93,sky:0x4cc3e8,skyD:0x2a9fc4,orange:0xff6a1a,green:0x2ec27e,red:0xff4d6d,yellow:0xffd23f,
@@ -93,6 +93,15 @@ const I18N={
   restartNote:'Changing language or beads restarts the challenge.',
   freeManual:'👆 Move Beads', freeInput:'🔢 Type a Number', typeHint:'Type a number, then tap Show it!', show:'▶ Show it!',
   soro:{clear:'🧹 First, clear the abacus', zero:p=>`${p}: 0 → leave it empty`,
+    watch:'👀 Watch the fingers…', yourTurn:'Now your turn! 👉',
+    hDown:p=>`${p}: index finger 👇 pulls the top bead down`,
+    hUp:p=>`${p}: index finger ☝️ pushes the top bead up`,
+    eUp:(p,k)=>`${p}: thumb 👆 pushes ${k} bottom bead${k>1?'s':''} up`,
+    eDown:(p,k)=>`${p}: index finger 👇 pulls ${k} bottom bead${k>1?'s':''} down`,
+    both:(p,dh,de)=>dh>0&&de>0?`${p}: pinch! 🤏 index finger pulls the top bead down + thumb pushes ${de} bottom bead${de>1?'s':''} up, together`
+      :dh<0&&de<0?`${p}: index finger pushes the top bead up + pulls ${-de} bottom bead${de<-1?'s':''} down, together`
+      :dh>0?`${p}: top bead down 👇 + ${-de} bottom bead${de<-1?'s':''} down, together`
+      :`${p}: top bead up ☝️ + thumb pushes ${de} bottom bead${de>1?'s':''} up, together`,
     earth:(p,d)=>`${p}: ${d} → push up ${d} bottom bead${d>1?'s':''} 👆`, five:p=>`${p}: 5 → pull the top bead down 👇`,
     pinch:(p,d)=>`${p}: ${d} → pinch! top bead + ${d-5} bottom bead${d>6?'s':''} 🤏`, done:n=>`Done! ✨ ${n}`},
   praise:['Awesome! 🎉','Bead-tastic! 🧮','Nailed it! 🎯','Super star! 🌟','Abacus pro! 🚀'],
@@ -133,6 +142,15 @@ const I18N={
   restartNote:'Mengubah bahasa atau manik akan memulai ulang tantangan.',
   freeManual:'👆 Geser Manik', freeInput:'🔢 Ketik Angka', typeHint:'Ketik angka, lalu tekan Tunjukkan!', show:'▶ Tunjukkan!',
   soro:{clear:'🧹 Pertama, bersihkan sempoa', zero:p=>`${p}: 0 → biarkan kosong`,
+    watch:'👀 Perhatikan jarinya…', yourTurn:'Sekarang giliranmu! 👉',
+    hDown:p=>`${p}: telunjuk 👇 menarik manik atas turun`,
+    hUp:p=>`${p}: telunjuk ☝️ mendorong manik atas naik`,
+    eUp:(p,k)=>`${p}: ibu jari 👆 mendorong ${k} manik bawah naik`,
+    eDown:(p,k)=>`${p}: telunjuk 👇 menarik ${k} manik bawah turun`,
+    both:(p,dh,de)=>dh>0&&de>0?`${p}: jepit! 🤏 telunjuk menarik manik atas turun + ibu jari mendorong ${de} manik bawah naik, bersamaan`
+      :dh<0&&de<0?`${p}: telunjuk mendorong manik atas naik + menarik ${-de} manik bawah turun, bersamaan`
+      :dh>0?`${p}: manik atas turun 👇 + ${-de} manik bawah turun, bersamaan`
+      :`${p}: manik atas naik ☝️ + ibu jari mendorong ${de} manik bawah naik, bersamaan`,
     earth:(p,d)=>`${p}: ${d} → dorong ${d} manik bawah ke atas 👆`, five:p=>`${p}: 5 → tarik manik atas ke bawah 👇`,
     pinch:(p,d)=>`${p}: ${d} → jepit! manik atas + ${d-5} manik bawah 🤏`, done:n=>`Selesai! ✨ ${n}`},
   praise:['Hebat! 🎉','Keren! 😎','Tepat sekali! 🎯','Bintang sempoa! 🌟','Mantap! 🚀'],
@@ -382,6 +400,10 @@ class Abacus{
       c.add([pt,dt]);this.placeT.push(pt);this.digitT.push(dt);
     }
     if(!opts.noHint){this.hintT=txt(scene,W/2,H+38,L().hint,21,'#7b8a95',{body:true,wrap:Math.max(W,600)});c.add(this.hintT);}
+    // demonstration fingers (index finger + thumb)
+    this.fIndex=txt(scene,0,0,'👇',58).setAlpha(0); this.fThumb=txt(scene,0,0,'👆',58).setAlpha(0);
+    c.add([this.fIndex,this.fThumb]);
+    this.baseGlow=(opts.glow||[]).slice();
     this.toastT=txt(scene,W/2,-20,'',34,'#24323d',{stroke:'#ffd23f',st:12}).setAlpha(0);c.add(this.toastT);
     this.onMove=p=>this.move(p); this.onUp=p=>this.up(p);
     scene.input.on('pointermove',this.onMove);scene.input.on('pointerup',this.onUp);scene.input.on('pointerupoutside',this.onUp);
@@ -507,41 +529,88 @@ class Abacus{
     const step=()=>{if(this.dead)return;if(r>=this.n){this.resetTechnique();cb&&cb();return;}
       const d=+s[r];this.state[r]={h:d>=5?1:0,e:d%5};this.update();sfx.clack();r++;this.s.time.delayedCall(380,step);};
     step();}
-  // Set a number the way a sempoa teacher would: clear first, then rod by rod from the left,
-  // pushing bottom beads (1-4), pulling the top bead (5), or pinching both together (6-9).
+  // ---------- teaching animations ----------
+  // Caption for moving one rod from state s0 to digit (h1,e1)
+  moveCaption(place,s0,h1,e1){
+    const S=L().soro,p=L().places[place],dh=h1-s0.h,de=e1-s0.e;
+    if(dh&&de) return S.both(p,dh,de);
+    if(dh>0) return S.hDown(p); if(dh<0) return S.hUp(p);
+    if(de>0) return S.eUp(p,de); if(de<0) return S.eDown(p,-de);
+    return S.zero(p);
+  }
+  // Move one rod to digit d slowly, with fingers doing the work the way it's taught:
+  // thumb pushes bottom beads UP; index finger pulls bottom beads DOWN and moves the top bead;
+  // when the top and bottom beads both change, both fingers move at the same time (pinch).
+  fingerMove(r,d,cb,dur=950){
+    const s0=this.state[r],h1=d>=5?1:0,e1=d%5,b=this.beads[r],x=this.rodX[r],tw=[],used=[];
+    const finger=(f,glyph,fx,y0,y1)=>{this.s.tweens.killTweensOf(f);f.setText(glyph).setPosition(fx,y0).setAlpha(0);
+      used.push(f);this.s.tweens.add({targets:f,alpha:1,duration:220});tw.push({targets:f,y:y1});};
+    if(s0.h!==h1){
+      this.s.tweens.killTweensOf(b.h);this.busy.add(b.h);tw.push({targets:b.h,y:yH(h1)});
+      if(h1) finger(this.fIndex,'👇',x+10,yH(0)-24,yH(1)-24);                    // pull top bead down
+      else   finger(this.fIndex,'☝️',x+10,yH(1)+AB.BH+24,yH(0)+AB.BH+24);        // push top bead up
+    }
+    if(s0.e!==e1){
+      const up=e1>s0.e,lo=Math.min(s0.e,e1),hi=Math.max(s0.e,e1);
+      b.e.slice(lo,hi).forEach((im,i)=>{this.s.tweens.killTweensOf(im);this.busy.add(im);tw.push({targets:im,y:yE(lo+i,up)});});
+      if(up) finger(this.fThumb,'👆',x-10,yE(hi-1,false)+AB.BH+24,yE(hi-1,true)+AB.BH+24); // thumb from below
+      else   finger(this.fThumb,'👇',x-10,yE(lo,true)-24,yE(lo,false)-24);                   // index finger from above
+    }
+    if(!tw.length){this.s.time.delayedCall(350,()=>cb&&cb());return;}
+    const pinch=s0.h!==h1&&s0.e!==e1;
+    this.s.time.delayedCall(320,()=>{ if(this.dead) return;
+      tw.forEach(t=>this.s.tweens.add({...t,duration:dur,ease:'Sine.InOut'}));
+      sfx.clack(); if(pinch){sfx.pinch();this.toast(L().pinch);}
+      this.s.time.delayedCall(dur+60,()=>{ if(this.dead) return;
+        this.state[r]={h:h1,e:e1};[b.h,...b.e].forEach(im=>this.busy.delete(im));this.update(true);sfx.clack();
+        used.forEach(f=>this.s.tweens.add({targets:f,alpha:0,duration:260}));
+        this.s.time.delayedCall(320,()=>cb&&cb());
+      });
+    });
+  }
+  runSteps(steps,onStep,done){
+    let i=0;
+    const next=()=>{ if(this.dead) return;
+      if(i>=steps.length){done&&done();return;}
+      const st=steps[i++]; this.opts.glow=st.place!==undefined?[st.place]:[]; this.update();
+      if(st.t) onStep&&onStep(st.t);
+      st.run(()=>this.s.time.delayedCall(st.pause??600,next));
+    };
+    next();
+  }
+  // Ketik Angka: clear, then set each rod from the left with finger moves.
   sorobanTo(n,onStep,done){
-    if(this.animating) return; this.animating=true;
+    if(this.animating||this.demoing) return; this.animating=true;
     const wasLocked=this.locked; this.lock(true);
     const S=L().soro,digits=String(n).padStart(this.n,'0').slice(-this.n),steps=[];
-    if(this.value()>0) steps.push({t:S.clear,wait:900,run:()=>{this.state.forEach(st=>{st.h=0;st.e=0;});this.update();sfx.clack();}});
+    if(this.value()>0) steps.push({t:S.clear,pause:350,run:cb=>{this.state.forEach(st=>{st.h=0;st.e=0;});this.update();sfx.clack();this.s.time.delayedCall(700,cb);}});
     let started=false;
     for(let r=0;r<this.n;r++){
       const d=+digits[r],place=this.n-1-r;
       if(!started&&d===0&&r<this.n-1) continue;   // skip leading zeros
       started=true;
-      const p=L().places[place];
-      const t=d===0?S.zero(p):d<5?S.earth(p,d):d===5?S.five(p):S.pinch(p,d);
-      steps.push({t,place,wait:d===0?750:1250,run:()=>{
-        this.state[r]={h:d>=5?1:0,e:d%5};this.update();
-        if(d) sfx.clack(); if(d>5){sfx.pinch();this.toast(L().pinch);} }});
+      steps.push({place,t:this.moveCaption(place,{h:0,e:0},d>=5?1:0,d%5),pause:500,
+        run:cb=>d===0?this.s.time.delayedCall(700,cb):this.fingerMove(r,d,cb)});
     }
-    steps.push({t:S.done(n),wait:10,run:()=>{sfx.good();}});
-    let i=0;
-    const next=()=>{
-      if(this.dead) return;
-      if(i>=steps.length){this.opts.glow=[];this.update();this.animating=false;this.lock(wasLocked);this.resetTechnique();done&&done();return;}
-      const st=steps[i++];this.opts.glow=st.place!==undefined?[st.place]:[];
-      st.run();this.update();onStep&&onStep(st.t);
-      this.s.time.delayedCall(st.wait,next);
-    };
-    next();
+    steps.push({t:S.done(n),pause:10,run:cb=>{sfx.good();cb();}});
+    this.runSteps(steps,onStep,()=>{this.opts.glow=this.baseGlow.slice();this.update();this.animating=false;this.lock(wasLocked);this.resetTechnique();done&&done();});
   }
-  demo(n){ // show a pinch: all beads of each rod move at the same time
-    if(this.demoing) return; this.demoing=true;
-    const saved=this.state.map(s=>({...s})),wasLocked=this.locked; this.locked=true;
-    this.state=[...String(n).padStart(this.n,'0')].map(c=>{const d=+c;return{h:d>=5?1:0,e:d%5}});
-    this.update();sfx.clack();this.toast(L().pinch);sfx.pinch();
-    this.s.time.delayedCall(1500,()=>{if(this.dead)return;this.state=saved;this.update();this.locked=wasLocked;this.demoing=false;this.resetTechnique();});
+  // Belajar "Contohkan": show how to go from the lesson's start to the target, then put it back.
+  demo(n,onStep,done){
+    if(this.demoing||this.animating) return; this.demoing=true;
+    const saved=this.state.map(s=>({...s})),wasLocked=this.locked; this.lock(true);
+    const S=L().soro,digits=String(n).padStart(this.n,'0').slice(-this.n),cur=this.state.map(s=>({...s}));
+    const steps=[{t:S.watch,pause:300,run:cb=>this.s.time.delayedCall(500,cb)}];
+    for(let r=0;r<this.n;r++){
+      const d=+digits[r],h1=d>=5?1:0,e1=d%5,place=this.n-1-r;
+      if(cur[r].h===h1&&cur[r].e===e1) continue;
+      steps.push({place,t:this.moveCaption(place,cur[r],h1,e1),pause:650,run:cb=>this.fingerMove(r,d,cb,1100)});
+      cur[r]={h:h1,e:e1};
+    }
+    steps.push({t:S.yourTurn,pause:1500,run:cb=>{sfx.good();cb();}});
+    this.runSteps(steps,onStep,()=>{ if(this.dead) return;
+      this.state=saved;this.opts.glow=this.baseGlow.slice();this.update();
+      this.lock(wasLocked);this.demoing=false;this.resetTechnique();done&&done();});
   }
   reveal(){this.opts.hideDigits=false;this.update();}
   lock(v){this.locked=v;if(this.hintT)this.hintT.setVisible(!v);}
@@ -727,13 +796,20 @@ class Learn extends Phaser.Scene{
     this.valBg=panel(this,60,vy-30,170,60,0xffffff,C.line,18);
     this.valT=txt(this,145,vy,'0',42,'#2a9fc4');
     this.wordT=txt(this,250,vy,'',22,'#8c99a3',{body:true,ox:0,wrap:410,align:'left'});
+    this.capT=txt(this,GW/2,vy,'',22,'#2f7f93',{body:true,wrap:640}).setVisible(false); // demo captions
     // buttons: back · reset · show me
     const by=1200,busy=()=>this.sheet||this.ab.demoing;
-    const P=Ls.pinch?[[130,190],[340,200],[565,240]]:[[200,250],[500,280]];
+    const P=[[130,190],[340,200],[565,240]];
     const back=btn(this,P[0][0],by,P[0][1],78,0xffffff,T.prev,()=>{if(!busy())this.scene.start('Learn',{i:this.i-1})},{white:true,textColor:'#2f7f93',size:26});
     if(this.i===0) back.setEnabled(false);
     btn(this,P[1][0],by,P[1][1],78,0xffffff,T.reset,()=>{if(busy())return;this.ab.set(Ls.start||0);this.show(this.ab.value())},{white:true,textColor:'#2f7f93',size:26});
-    if(Ls.pinch) btn(this,P[2][0],by,P[2][1],78,C.purple,T.showMe,()=>{if(!busy())this.ab.demo(Ls.target)},{size:26});
+    btn(this,P[2][0],by,P[2][1],78,C.purple,T.showMe,()=>{
+      if(busy())return;
+      this.ab.set(Ls.start||0);this.show(this.ab.value());
+      [this.valBg,this.valT,this.wordT].forEach(o=>o.setVisible(false));this.capT.setVisible(true);
+      this.ab.demo(Ls.target,t=>this.capT.setText(t),()=>{
+        this.capT.setVisible(false);[this.valBg,this.valT,this.wordT].forEach(o=>o.setVisible(true));this.show(this.ab.value());});
+    },{size:26});
     this.done=false; this.show(this.ab.value());
   }
   show(v){this.valT.setText(String(v));this.wordT.setText(L().words(v));}
