@@ -3,9 +3,9 @@
 <img src="assets/mascot.png" alt="ABC Sempoa mascot" width="220" align="right">
 
 A fun abacus (sempoa / soroban) learning game for kids, built with [Phaser 3](https://phaser.io).
-Landscape layout (1280 × 720), playable on phones, tablets and desktop. Available in **Bahasa Indonesia** and **English**.
+Two layouts — **landscape** (1280 × 720) or **portrait** (720 × 1280), chosen in ⚙️ Options — playable on phones, tablets and desktop. Available in **Bahasa Indonesia** and **English**.
 
-*Game belajar sempoa yang seru untuk anak-anak. Tampilan mendatar (landscape), bisa dimainkan di HP, tablet, dan komputer, dalam Bahasa Indonesia dan Inggris.*
+*Game belajar sempoa yang seru untuk anak-anak. Tampilan mendatar atau tegak (pilih di Pengaturan), bisa dimainkan di HP, tablet, dan komputer, dalam Bahasa Indonesia dan Inggris.*
 
 ## Play / Main
 
@@ -35,7 +35,7 @@ python3 -m http.server 8000
   - Two fingers: one pulls the top bead down, one pushes bottom beads up. Fingers don't have to be perfectly in sync — moves within about half a second count as one pinch.
   - One finger or mouse: slide the top bead down **through the bar** onto the bottom bead you want.
 - Moving them one by one (with a pause between) counts as a wrong move in lessons and the challenge.
-- **⚙️ Options / Pengaturan** (top-right on every screen): language (Indonesia / English), bead colour (🌈 colourful or 🟤 classic brown), sound on/off, and About (version, made by Binjesoft).
+- **⚙️ Options / Pengaturan** (top-right on every screen): language (Indonesia / English), layout (🖥️ mendatar / 📱 tegak), bead colour (🌈 colourful or 🟤 classic brown), sound on/off, and About (version, made by Binjesoft).
 
 ## The full sempoa
 
@@ -54,7 +54,7 @@ tests/              headless checks (run: node tests/test.js)
 
 ## Version
 
-2.1.0 — made by **Binjesoft**.
+2.2.0 — made by **Binjesoft**.
 
 ## Notes
 

@@ -2,7 +2,7 @@
 const fs=require('fs');
 const html=fs.readFileSync(process.argv[2]||require('path').join(__dirname,'..','index.html'),'utf8');
 let body=html.split('<script>\nfunction SEMPOA(){')[1].split('\n// wait for the engine')[0];
-body=body.replace('fontsReady.then(()=>new Phaser.Game(config));','globalThis.__T={Boot,Home,Learn,Cert,Challenge,Result,Free,Abacus,makeQ,PPLAN,LESSONS,I18N,setLang:l=>{LANG=l}};');
+body=body.replace('fontsReady.then(()=>startGame());','globalThis.__T={setOrient:o=>{ORIENT=o;PORTRAIT=o==="portrait";GW=PORTRAIT?720:1280;GH=PORTRAIT?1280:720;},Boot,Home,Learn,Cert,Challenge,Result,Free,Abacus,makeQ,PPLAN,LESSONS,I18N,setLang:l=>{LANG=l}};');
 body=body.replace(/\}\s*$/,''); // drop closing brace of SEMPOA
 
 let queue=[];

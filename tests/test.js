@@ -3,8 +3,8 @@ const ok=(c,m)=>{if(!c){console.log('FAIL:',m);process.exitCode=1;}else console.
 const P=(id,x,y,touch=true)=>({id,x,y,wasTouch:touch});
 
 { const b=new T.Boot(); b.create(); ok(JSON.stringify(b.canvases)===JSON.stringify(['bead0','bead1','bead2','bead3','beadBrown'])&&b.started&&b.started[0]==='Home','Boot draws the 5 sharp bead textures and opens Home'); }
-for(const lang of ['id','en']){
-  T.setLang(lang); console.log('\n=== language',lang);
+for(const orient of ['landscape','portrait']) for(const lang of ['id','en']){
+  T.setLang(lang); T.setOrient(orient); console.log('\n=== '+orient+' · '+lang);
   // ---------- every scene builds ----------
   const home=new T.Home(); home.create({}); runQueue(home,1000); ok(true,'Home builds');
   for(let i=0;i<T.LESSONS.length;i++){ const s=new T.Learn(); s.create({i}); runQueue(s,500); }
@@ -17,7 +17,7 @@ for(const lang of ['id','en']){
   const rs=new T.Result(); rs.create({score:900,correct:8,best:4,time:125,results:ch.qs.map((Q,i)=>({Q,ok:i%3!==0,given:5,skipped:i===3,noPinch:i===6}))}); ok(true,'Result builds');
   home.create({_opts:true}); ok(true,'Options panel builds');
 }
-T.setLang('id');
+T.setLang('id'); T.setOrient('landscape');
 
 // ---------- full sempoa: value, digits on the unit rod ----------
 const s=new T.Learn(); s.create({i:0});
@@ -62,6 +62,7 @@ ab.set(12,true); let d2=false; ab.demo(17,()=>{},()=>d2=true); runQueue(s,60000)
 ok(d2&&ab.value()===12,'demo shows 12→17 then puts the beads back at 12');
 
 // ---------- Challenge flow: running total ▶, submit, skip, results ----------
+for(const orient of ['landscape','portrait']){ T.setOrient(orient); console.log('--- challenge flow · '+orient);
 const ch=new T.Challenge(); ch.create({});
 let calcIdx=ch.qs.findIndex(q=>q.type==='calc'); ch.qi=calcIdx; ch.loadQ();
 const Q=ch.qs[calcIdx];
@@ -72,6 +73,8 @@ runQueue(ch,3000);
 ch.qi++; ch.loadQ(); ch.skip(); ok(ch.results[1].skipped,'skip records a skipped question');
 // help works on a fresh question
 ch.qi++; ch.loadQ(); ch.help(); runQueue(ch,60000); ok(!ch.ab.demoing,'help demo finishes');
+}
+T.setOrient('landscape');
 // generator: 5000 sets, answers in range, totals consistent
 let bad=0; for(let n=0;n<5000;n++) T.PPLAN.map(T.makeQ).forEach(q=>{
   if(q.answer<0||q.answer>9999) bad++;
