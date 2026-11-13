@@ -3,9 +3,9 @@
 <img src="assets/mascot.png" alt="ABC Sempoa mascot" width="220" align="right">
 
 A fun abacus (sempoa / soroban) learning game for kids, built with [Phaser 3](https://phaser.io).
-Portrait layout, playable on phones, tablets and desktop. Available in **Bahasa Indonesia** and **English**.
+Landscape layout (1280 × 720), playable on phones, tablets and desktop. Available in **Bahasa Indonesia** and **English**.
 
-*Game belajar sempoa yang seru untuk anak-anak. Tampilan potret, bisa dimainkan di HP, tablet, dan komputer, dalam Bahasa Indonesia dan Inggris.*
+*Game belajar sempoa yang seru untuk anak-anak. Tampilan mendatar (landscape), bisa dimainkan di HP, tablet, dan komputer, dalam Bahasa Indonesia dan Inggris.*
 
 ## Play / Main
 
@@ -24,8 +24,8 @@ python3 -m http.server 8000
 | Mode | What kids do |
 |---|---|
 | 📚 **Belajar / Learn** | 10 short lessons with Ollie the Owl: bottom beads (1), top bead (5), the pinch, tens, adding, up to 999 |
-| 🎮 **Tantangan / Challenge** | 10 rounds — build a number, read the abacus, add and take away — with timer, combo multiplier, stars and best score |
-| 🎨 **Main Bebas / Free Play** | **👆 Geser Manik / Move Beads:** a 4-rod abacus that shows the number in digits and words. **🔢 Ketik Angka / Type a Number:** type any number up to 9999 and watch the sempoa set it the proper way — clear first, then rod by rod from the left, with a caption for every move (push, pull, or pinch) |
+| 🎮 **Tantangan / Challenge** | 10 questions on a **full 13-rod sempoa** (scroll with the slider or ‹ ›): show a number, or work out a sum step by step — the ▶ follows your running total. Timer, ❓ Guide, 💡 Help (finger demo), ✔ Submit, ⏭ Skip, stars and best score |
+| 🎨 **Main Bebas / Free Play** | **👆 Geser Manik / Move Beads:** the full 13-rod sempoa that shows the number in digits and words. **🔢 Ketik Angka / Type a Number:** type any number up to 9 digits and watch the sempoa set it the proper way — clear first, then rod by rod from the left, with a caption for every move (push, pull, or pinch) |
 
 ## Controls / Kontrol
 
@@ -37,17 +37,24 @@ python3 -m http.server 8000
 - Moving them one by one (with a pause between) counts as a wrong move in lessons and the challenge.
 - **⚙️ Options / Pengaturan** (top-right on every screen): language (Indonesia / English), bead colour (🌈 colourful or 🟤 classic brown), sound on/off, and About (version, made by Binjesoft).
 
+## The full sempoa
+
+- 13 rods; the **orange ▼ and dot** mark the ones rod (Satuan), white **unit dots** mark every third rod.
+- Rods right of the ones rod are decimals (persepuluhan, perseratusan…).
+- Drag the **slider** under the sempoa, or tap the **‹ ›** arrows, to see more rods.
+
 ## Files
 
 ```
 index.html          the whole game (Phaser 3, single file)
 assets/mascot.svg   the ABC Sempoa kid mascot (vector)
 assets/mascot.png   the mascot as a PNG
+tests/              headless checks (run: node tests/test.js)
 ```
 
 ## Version
 
-1.3.0 — made by **Binjesoft**.
+2.0.0 — made by **Binjesoft**.
 
 ## Notes
 
