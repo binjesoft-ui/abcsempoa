@@ -48,7 +48,7 @@ const calcHD=()=>clamp((window.devicePixelRatio||1)*Math.min((window.innerWidth|
 let HD=calcHD();
 let GAME=null, REOPEN_OPTS=false;
 const TEX_R=2; // bead textures are drawn at 2x and shown at half size
-const VERSION='2.2.0';
+const VERSION='2.2.1';
 const FONT="'Baloo 2', 'Nunito', Arial, sans-serif";
 const BODY="'Nunito', Arial, sans-serif";
 const C={teal:0x2f7f93,sky:0x4cc3e8,skyD:0x2a9fc4,orange:0xff6a1a,green:0x2ec27e,red:0xff4d6d,yellow:0xffd23f,
@@ -1093,6 +1093,7 @@ class Challenge extends Phaser.Scene{
   clearQ(){this.objs.forEach(o=>o.destroy());this.objs=[];if(this.ab){this.ab.destroy();this.ab=null;}if(this.sh){this.sh.destroy();this.sh=null;}}
   loadQ(){
     this.clearQ(); const Q=this.qs[this.qi],T=L(),Ly=this.L; this.answered=false; this.cur=0; this.qStart=this.time.now;
+    this.ansT=null; this.rows=[]; // forget the previous question's answer box (it was just removed)
     this.progT.setText(`${this.qi+1}/10`);
     const o=this.objs;
     if(Q.type==='build'){

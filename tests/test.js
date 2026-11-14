@@ -80,3 +80,13 @@ let bad=0; for(let n=0;n<5000;n++) T.PPLAN.map(T.makeQ).forEach(q=>{
   if(q.answer<0||q.answer>9999) bad++;
   if(q.type==='calc'&&q.terms.reduce((a,b)=>a+b,0)!==q.answer) bad++; });
 ok(bad===0,'5000 challenge sets: all answers valid ('+bad+' bad)');
+
+// ---------- play all 10 questions, answering every one (catches stale references) ----------
+for(const orient of ['landscape','portrait']) for(const how of ['submit','skip']){
+  T.setOrient(orient); const c=new T.Challenge(); c.create({}); let err=null;
+  try{ for(let q=0;q<10;q++){ const Q=c.qs[c.qi]; c.ab.set(Q.answer,true);
+       if(how==='submit') c.submit(); else c.skip(); runQueue(c,3000); if(q<9){c.qi++;c.loadQ();} } }
+  catch(e){err=e.message+' (question '+(c.qi+1)+')';}
+  ok(!err,'all 10 questions via '+how+' · '+orient+(err?' → '+err:''));
+}
+T.setOrient('landscape');

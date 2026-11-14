@@ -12,7 +12,9 @@ function obj(extra={}){
     if(p in t) return t[p];
     if(p==='on') return (ev,fn)=>{(t.handlers[ev]=t.handlers[ev]||[]).push(fn);return prox(t)};
     if(p==='then') return undefined;
-    return (...a)=>{ if(p==='setY')t.y=a[0]; if(p==='setX')t.x=a[0]; if(p==='setPosition'){t.x=a[0];t.y=a[1];}
+    return (...a)=>{ if(t.destroyed&&p!=='destroy') throw new Error('used a destroyed object: .'+String(p)+'()');
+      if(p==='destroy'){t.destroyed=true;t.list.forEach(ch=>{try{ch.destroy()}catch(e){}});return;}
+      if(p==='setY')t.y=a[0]; if(p==='setX')t.x=a[0]; if(p==='setPosition'){t.x=a[0];t.y=a[1];}
       if(p==='setAlpha')t.alpha=a[0]; if(p==='setVisible')t.visible=a[0]; if(p==='setText')t.text=a[0];
       if(p==='add'&&Array.isArray(a[0]))t.list.push(...a[0]); else if(p==='add')t.list.push(a[0]);
       if(p==='getValue') return 0;
