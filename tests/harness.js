@@ -40,7 +40,8 @@ class Scene{
     this.input={_h:{},on(ev,fn){(this._h[ev]=this._h[ev]||[]).push(fn)},off(ev,fn){this._h[ev]=(this._h[ev]||[]).filter(f=>f!==fn)}};
     this.events={once(){},on(){}};
     this.cameras={main:{setBackgroundColor(){return this},setZoom(){return this},centerOn(){return this},shake(){}}};
-    this.textures={exists:()=>true,addImage(){},createCanvas:(k)=>{(S.canvases=S.canvases||[]).push(k);return mkObj({getContext:()=>mkObj()});}};
+    this.textures={exists:()=>true,addImage(){},createCanvas:(k)=>{(S.canvases=S.canvases||[]).push(k);return mkObj({getContext:()=>mkObj()});},
+      get:(k)=>{S._tex=S._tex||{};return S._tex[k]=S._tex[k]||mkObj({refreshes:0,getContext:()=>mkObj(),refresh(){this.refreshes++;}});}};
     this.sys={isActive:()=>true};
     this.scene={start:(k,d)=>{this.started=[k,d];},restart:(d)=>{this.restarted=d;}};
   }

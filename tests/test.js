@@ -2,7 +2,7 @@ const {T,runQueue,resetQueue}=require('./harness.js');
 const ok=(c,m)=>{if(!c){console.log('FAIL:',m);process.exitCode=1;}else console.log('ok  ',m);};
 const P=(id,x,y,touch=true)=>({id,x,y,wasTouch:touch});
 
-{ const b=new T.Boot(); b.create(); ok(JSON.stringify(b.canvases)===JSON.stringify(['bead0','bead1','bead2','bead3','beadBrown'])&&b.started&&b.started[0]==='Home','Boot draws the 5 sharp bead textures and opens Home'); }
+{ const b=new T.Boot(); b.create(); ok(JSON.stringify(b.canvases)===JSON.stringify(['pinchHand','bead0','bead1','bead2','bead3','beadBrown'])&&b.started&&b.started[0]==='Home','Boot draws the 5 sharp bead textures + the pinch-hand canvas and opens Home'); }
 for(const orient of ['landscape','portrait']) for(const lang of ['id','en']){
   T.setLang(lang); T.setOrient(orient); console.log('\n=== '+orient+' · '+lang);
   // ---------- every scene builds ----------
@@ -61,6 +61,15 @@ console.log('     captions:',caps.join(' | '));
 { ab.set(0,true); const shown=[]; const orig=ab.s.tweens.add; ab.s.tweens.add=(c)=>{if(c&&c.targets===ab.fHand&&c.alpha===1)shown.push('hand');return orig(c);};
   ab.demo(3,()=>{},()=>{}); runQueue(s,60000); ab.s.tweens.add=orig;
   ok(ab.fHand&&shown.length>0,'the thumb-hand picture appears when pushing bottom beads up'); }
+// ---------- jepit: the animated pinch hand for 6–9, the thumb hand for 1–4 ----------
+for(const [n,wantPinch] of [[6,true],[8,true],[3,false],[5,false]]){
+  ab.set(0,true); runQueue(s,1000); const seen=new Set(); const orig=ab.s.tweens.add;
+  ab.s.tweens.add=(c)=>{if(c&&c.alpha===1){if(c.targets===ab.fPinch)seen.add('pinch');if(c.targets===ab.fHand)seen.add('thumb');if(c.targets===ab.fIndex)seen.add('index');}return orig(c);};
+  const tex=ab.s.textures.get('pinchHand'),before=tex.refreshes;
+  ab.demo(n,()=>{},()=>{}); runQueue(s,60000); ab.s.tweens.add=orig;
+  if(wantPinch) ok(seen.has('pinch')&&!seen.has('thumb')&&!seen.has('index')&&tex.refreshes>before,'demo '+n+': the animated pinch hand closes on the beads (redrawn '+(tex.refreshes-before)+'×)');
+  else ok(!seen.has('pinch'),'demo '+n+': no pinch hand (not a jepit)');
+}
 // ---------- Contohkan / Help demo returns the beads ----------
 ab.set(12,true); let d2=false; ab.demo(17,()=>{},()=>d2=true); runQueue(s,60000);
 ok(d2&&ab.value()===12,'demo shows 12→17 then puts the beads back at 12');
