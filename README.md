@@ -66,7 +66,7 @@ challenges/         published daily/ and weekly/ question sets
 
 ## Version
 
-2.4.0 — made by **Binjesoft**.
+2.4.1 — made by **Binjesoft**.
 
 ## Notes
 

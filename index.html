@@ -48,7 +48,7 @@ const calcHD=()=>clamp((window.devicePixelRatio||1)*Math.min((window.innerWidth|
 let HD=calcHD();
 let GAME=null, REOPEN_OPTS=false;
 const TEX_R=2; // bead textures are drawn at 2x and shown at half size
-const VERSION='2.4.0';
+const VERSION='2.4.1';
 const FONT="'Baloo 2', 'Nunito', Arial, sans-serif";
 const BODY="'Nunito', Arial, sans-serif";
 const C={teal:0x2f7f93,sky:0x4cc3e8,skyD:0x2a9fc4,orange:0xff6a1a,green:0x2ec27e,red:0xff4d6d,yellow:0xffd23f,
@@ -427,45 +427,88 @@ function sheet(scene,{kind,emoji,title,body,btnLabel,onBtn}){
   return c;
 }
 
-// Cartoon pinch hand ("jepit"), drawn live so the fingertips sit exactly on the beads.
-// Shaped like the real gesture: the hand comes from the right in a "C" — index finger over the top
-// bead, thumb under the bottom bead — and the C closes as the beads slide to the bar.
+// Cartoon pinch hand ("jepit"), in the same style and colours as the thumb picture.
+// A jointed hand: the index finger (3 bones) reaches over the top bead, the thumb (2 bones) comes up
+// under the bottom beads, and the palm moves so both fingers bend naturally. Redrawn every frame
+// from the live bead positions, so the fingertips stay on the beads.
 // A = where the index fingertip presses (top of the top bead),
 // B = where the thumb tip pushes (underside of the lowest moving bottom bead).
-// ctx: 2D canvas context; S: pixels per sempoa unit; ox, oy: sempoa coords of the canvas's top-left.
-const PINCH_BOX={x:-60,y:-70,w:440,h:540}; // canvas area around the rod, in sempoa units (x relative to the rod)
-function drawPinchHand(ctx,S,ox,oy,A,B){
+// o.slide: 0..1 hand sliding in from the right; o.relax: 0..1 fingers opening a little as it leaves.
+const PINCH_BOX={x:-70,y:-130,w:620,h:700}; // canvas area around the rod, in sempoa units (x relative to the rod)
+function drawPinchHand(ctx,S,ox,oy,A,B,o={}){
   const X=v=>(v-ox)*S, Y=v=>(v-oy)*S;
-  const SKIN='#f7c443', LINE='#d08a1e', NAIL='#fde6ad', SHADE='rgba(214,140,30,.30)';
-  const P={x:A.x+150,y:(A.y+B.y)/2+6};                    // palm centre, beside the rod
-  const iw=32, tw=35;                                       // finger thickness
-  const idx=[{x:P.x-40,y:P.y-44},{x:A.x+44,y:A.y-iw/2-10},{x:A.x+6,y:A.y-iw/2+1}];   // index: base → bend → tip
-  const th =[{x:P.x-46,y:P.y+42},{x:B.x+46,y:B.y+tw/2+8},{x:B.x+6,y:B.y+tw/2-1}];    // thumb: base → joint → tip
-  const curl=[{x:P.x-54,y:P.y-16,r:19},{x:P.x-58,y:P.y+5,r:18},{x:P.x-53,y:P.y+25,r:17}]; // curled fingers inside the C
-  const wrist=[{x:P.x+20,y:P.y+8},{x:P.x+150,y:P.y+70}];
-  const path=(pts,w)=>{ctx.lineWidth=w*S;ctx.lineCap='round';ctx.lineJoin='round';ctx.beginPath();
-    pts.forEach((p,i)=>i?ctx.lineTo(X(p.x),Y(p.y)):ctx.moveTo(X(p.x),Y(p.y)));ctx.stroke();};
-  const blob=g=>{ // the whole hand as one shape, so the parts merge without seams
-    path(wrist,100+g); path(idx,iw+g); path(th,tw+g);
-    ctx.beginPath();ctx.ellipse(X(P.x),Y(P.y),(64+g/2)*S,(66+g/2)*S,-0.3,0,Math.PI*2);ctx.fill();
-    curl.forEach(c=>{ctx.beginPath();ctx.arc(X(c.x),Y(c.y),(c.r+g/2)*S,0,Math.PI*2);ctx.fill();});
+  const SKIN='#f6c03c', SHADE='#eaa830', LINE='#cf8d22', NAIL='#fce4a4', NAIL_LINE='#e3ac45';
+  const slide=o.slide||0, relax=o.relax||0;
+  const add=(p,dx,dy)=>({x:p.x+dx,y:p.y+dy}), dist=(p,q)=>Math.hypot(q.x-p.x,q.y-p.y);
+  const dir=a=>({x:Math.cos(a),y:Math.sin(a)});
+  // fingertips (with a little opening when relaxing)
+  const Ti=add(A,6,-19-relax*12), Tt=add(B,8,21+relax*12);
+  // bones: index = proximal + (middle and distal as one gentle piece) + short fingertip; thumb = proximal + distal + tip
+  const I=[100,104,30], Iw=[54,48,42,38];
+  const Tm=[92,88,30], Tw=[62,54,48,44];
+  const Di=add(Ti,22,-21), Dt=add(Tt,23,18);                         // fingertip joints: tip presses down / pushes up
+  const ik=(b,t,l1,l2,side)=>{let d=dist(b,t);d=Math.max(Math.abs(l1-l2)+1,Math.min(l1+l2-.5,d));
+    const th=Math.atan2(t.y-b.y,t.x-b.x),a=Math.acos(Math.max(-1,Math.min(1,(l1*l1+d*d-l2*l2)/(2*l1*d))));
+    const j1=add(b,l1*Math.cos(th+a),l1*Math.sin(th+a)),j2=add(b,l1*Math.cos(th-a),l1*Math.sin(th-a));
+    return side<0?(j1.y<j2.y?j1:j2):(j1.y>j2.y?j1:j2);};
+  // place the palm where both fingers keep a relaxed, gentle curve (≈88% of full reach)
+  const mid=(A.y+B.y)/2, IB={x:-100,y:-66}, TB={x:-74,y:84};
+  const ri=(I[0]+I[1])*0.88, rt=(Tm[0]+Tm[1])*0.88, maxI=(I[0]+I[1])*0.985, maxT=(Tm[0]+Tm[1])*0.985;
+  const cost=(px,py)=>{const di=Math.hypot(px+IB.x-Di.x,py+IB.y-Di.y), dt=Math.hypot(px+TB.x-Dt.x,py+TB.y-Dt.y);
+    return (di-ri)**2+(dt-rt)**2+0.15*(py-mid-8)**2+(di>maxI?1e4*(di-maxI):0)+(dt>maxT?1e4*(dt-maxT):0);};
+  let best={x:A.x+220,y:mid},bc=Infinity;
+  for(let px=A.x+90;px<=A.x+340;px+=8) for(let py=mid-90;py<=mid+90;py+=8){const c=cost(px,py);if(c<bc){bc=c;best={x:px,y:py};}}
+  for(let step=4;step>=0.5;step/=2) for(let k=0;k<6;k++){let moved=false;
+    for(const [dx,dy] of [[step,0],[-step,0],[0,step],[0,-step]]){const c=cost(best.x+dx,best.y+dy);if(c<bc){bc=c;best={x:best.x+dx,y:best.y+dy};moved=true;}}
+    if(!moved) break;}
+  const P={x:best.x+slide*70+relax*20,y:best.y};
+  const Ib=add(P,IB.x,IB.y), Tb=add(P,TB.x,TB.y);
+  const Pi=ik(Ib,Di,I[0],I[1],-1);                                   // index: arches up a little
+  const Jt=ik(Tb,Dt,Tm[0],Tm[1],1);                                  // thumb: bows down a little
+  const chain=(pts,lens)=>{for(let i=1;i<pts.length;i++){const a=Math.atan2(pts[i].y-pts[i-1].y,pts[i].x-pts[i-1].x);pts[i]=add(pts[i-1],lens[i-1]*Math.cos(a),lens[i-1]*Math.sin(a));}return pts;};
+  const idx=chain([Ib,Pi,Di,Ti],I), th=chain([Tb,Jt,Dt,Tt],Tm);
+  // ---- shapes ----
+  const capsule=(p,q,r1,r2)=>{ // tapered rounded bone
+    const a=Math.atan2(q.y-p.y,q.x-p.x),n={x:-Math.sin(a),y:Math.cos(a)};
+    ctx.beginPath();
+    ctx.moveTo(X(p.x+n.x*r1),Y(p.y+n.y*r1));ctx.lineTo(X(q.x+n.x*r2),Y(q.y+n.y*r2));
+    ctx.arc(X(q.x),Y(q.y),r2*S,a+Math.PI/2,a-Math.PI/2,true);
+    ctx.lineTo(X(p.x-n.x*r1),Y(p.y-n.y*r1));
+    ctx.arc(X(p.x),Y(p.y),r1*S,a-Math.PI/2,a+Math.PI/2,true);ctx.closePath();ctx.fill();};
+  const ell=(c,rx,ry,rot)=>{ctx.beginPath();ctx.ellipse(X(c.x),Y(c.y),rx*S,ry*S,rot,0,Math.PI*2);ctx.fill();};
+  const rrect=(x,y,w,h,r)=>{ctx.beginPath();ctx.roundRect?ctx.roundRect(X(x),Y(y),w*S,h*S,r*S):ctx.rect(X(x),Y(y),w*S,h*S);ctx.fill();};
+  const curl=[add(P,-112,-24),add(P,-118,14),add(P,-108,50)];                        // curled middle/ring/little fingers
+  const body=g=>{ // the whole hand as one silhouette (g = outline growth)
+    rrect(P.x-30-g,P.y-40-g,210+2*g,150+2*g,40);                                    // wrist / forearm
+    ell(P,108+g,112+g,-0.25);                                                        // palm
+    curl.forEach((c,k)=>capsule(add(c,50,0),c,31+g,27+g-k*2));
+    capsule(idx[0],idx[1],Iw[0]/2+g,Iw[1]/2+g);capsule(idx[1],idx[2],Iw[1]/2+g,Iw[2]/2+g);capsule(idx[2],idx[3],Iw[2]/2+g,Iw[3]/2+g);
+    capsule(th[0],th[1],Tw[0]/2+g,Tw[1]/2+g);capsule(th[1],th[2],Tw[1]/2+g,Tw[2]/2+g);capsule(th[2],th[3],Tw[2]/2+g,Tw[3]/2+g);
   };
   ctx.clearRect(0,0,ctx.canvas.width,ctx.canvas.height);
-  ctx.strokeStyle=ctx.fillStyle=LINE; blob(6);              // outline
-  ctx.strokeStyle=ctx.fillStyle=SKIN; blob(0);              // fill
-  // soft shade on the lower palm
-  ctx.beginPath();ctx.ellipse(X(P.x+20),Y(P.y+34),46*S,26*S,-0.3,0,Math.PI*2);ctx.fillStyle=SHADE;ctx.fill();
-  // creases: between curled fingers, index knuckle, thumb joint
-  ctx.strokeStyle=LINE;ctx.lineWidth=2.2*S;ctx.lineCap='round';
-  const arc=(x1,y1,cx,cy,x2,y2)=>{ctx.beginPath();ctx.moveTo(X(x1),Y(y1));ctx.quadraticCurveTo(X(cx),Y(cy),X(x2),Y(y2));ctx.stroke();};
-  [[curl[0],curl[1]],[curl[1],curl[2]]].forEach(([a,b])=>{const mx=(a.x+b.x)/2,my=(a.y+b.y)/2;arc(mx-16,my,mx-4,my+3,mx+10,my-1);});
-  const k=idx[1]; arc(k.x-4,k.y-10,k.x+3,k.y-2,k.x-2,k.y+8);
-  const j=th[1];  arc(j.x-2,j.y-10,j.x+5,j.y-2,j.x,j.y+8);
-  // nails
-  const nail=(x,y,rx,ry,rot)=>{ctx.beginPath();ctx.ellipse(X(x),Y(y),rx*S,ry*S,rot,0,Math.PI*2);ctx.fillStyle=NAIL;ctx.fill();
-    ctx.strokeStyle='rgba(208,138,30,.65)';ctx.lineWidth=1.4*S;ctx.stroke();};
-  nail(A.x+12,A.y-iw+4,9,6,-0.15);
-  nail(B.x+12,B.y+tw-6,9,6,0.15);
+  ctx.fillStyle=LINE; body(3.2);                      // outline
+  ctx.fillStyle=SKIN; body(0);                        // fill
+  // soft shading: under the palm, along the wrist, under the fingers
+  ctx.save(); ctx.globalAlpha=.55; ctx.fillStyle=SHADE;
+  ell(add(P,40,70),70,26,-0.25); rrect(P.x+150,P.y-40,30,150,14);
+  ctx.globalAlpha=.35; capsule(add(curl[2],46,10),add(curl[2],0,10),16,12);
+  ctx.restore();
+  // creases
+  ctx.strokeStyle=LINE; ctx.lineWidth=2.4*S; ctx.lineCap='round';
+  const crease=(p,q,len,side)=>{ // short line across a finger at joint p (q = next joint), on one side
+    const a=Math.atan2(q.y-p.y,q.x-p.x),n={x:-Math.sin(a),y:Math.cos(a)},c=add(p,n.x*side*4,n.y*side*4);
+    ctx.beginPath();ctx.moveTo(X(c.x+n.x*len),Y(c.y+n.y*len));ctx.quadraticCurveTo(X(c.x+Math.cos(a)*4),Y(c.y+Math.sin(a)*4),X(c.x-n.x*len*0.2),Y(c.y-n.y*len*0.2));ctx.stroke();};
+  crease(idx[1],idx[2],16,1);           // index knuckle lines (palm side)
+  crease(th[1],th[2],16,-1);              // thumb joint lines
+  curl.slice(0,2).forEach((c,k)=>{const d=add(c,6,17);ctx.beginPath();ctx.moveTo(X(d.x-18),Y(d.y));ctx.quadraticCurveTo(X(d.x),Y(d.y+4),X(d.x+30),Y(d.y-1));ctx.stroke();});
+  ctx.beginPath();ctx.moveTo(X(P.x-40),Y(P.y+58));ctx.quadraticCurveTo(X(P.x-10),Y(P.y+30),X(P.x+8),Y(P.y-14));ctx.stroke(); // thumb-palm fold
+  // nails, on the back of each fingertip
+  const nail=(p,q,len,w,side)=>{const a=Math.atan2(q.y-p.y,q.x-p.x),n={x:-Math.sin(a),y:Math.cos(a)};
+    const c=add(q,-Math.cos(a)*len*0.15+n.x*side*w*0.24,-Math.sin(a)*len*0.15+n.y*side*w*0.24);
+    ctx.save();ctx.fillStyle=NAIL;ctx.strokeStyle=NAIL_LINE;ctx.lineWidth=1.6*S;
+    ctx.beginPath();ctx.ellipse(X(c.x),Y(c.y),len*0.42*S,w*0.26*S,a,0,Math.PI*2);ctx.fill();ctx.stroke();ctx.restore();};
+  nail(idx[2],idx[3],26,Iw[3],1);     // index nail: back of the fingertip, away from the bead
+  nail(th[2],th[3],28,Tw[3],-1);      // thumb nail
 }
 const PINCH_S=1.5; // pixels per sempoa unit for the pinch-hand canvas
 
@@ -752,10 +795,14 @@ class Abacus{
       b.e.slice(lo,hi).forEach((im,i)=>{this.s.tweens.killTweensOf(im);this.busy.add(im);tw.push({targets:im,y:yE(lo+i,up)});});
       if(pinchIn){
         const low=b.e[hi-1],ct=this.s.textures.get('pinchHand');
-        drawPinch=()=>{drawPinchHand(ct.getContext(),PINCH_S,x+PINCH_BOX.x,PINCH_BOX.y,{x,y:b.h.y},{x,y:low.y+AB.BH});ct.refresh();};
+        const mo={slide:1,relax:0};
+        drawPinch=()=>{drawPinchHand(ct.getContext(),PINCH_S,x+PINCH_BOX.x,PINCH_BOX.y,{x,y:b.h.y},{x,y:low.y+AB.BH},mo);ct.refresh();};
+        this.pinchMo=mo;
         this.s.tweens.killTweensOf(this.fPinch);
         this.fPinch.setPosition(x+PINCH_BOX.x,PINCH_BOX.y).setAlpha(0); drawPinch();
-        used.push(this.fPinch); this.s.tweens.add({targets:this.fPinch,alpha:1,duration:220});
+        // the hand slides in from the side while it appears
+        this.s.tweens.add({targets:this.fPinch,alpha:1,duration:300});
+        this.s.tweens.addCounter({from:1,to:0,duration:300,ease:'Quad.Out',onUpdate:t=>{mo.slide=t.getValue();if(!this.dead)drawPinch();}});
       }
       else if(up&&this.fHand) finger(this.fHand,null,x,yE(hi-1,false)+AB.BH+1,yE(hi-1,true)+AB.BH+1);
       else if(up) finger(this.fThumb,'👆',x-10,yE(hi-1,false)+AB.BH+22,yE(hi-1,true)+AB.BH+22);
@@ -763,16 +810,18 @@ class Abacus{
     }
     if(!tw.length){this.s.time.delayedCall(350,()=>cb&&cb());return;}
     const pinch=s0.h!==h1&&s0.e!==e1;
-    this.s.time.delayedCall(320,()=>{ if(this.dead) return;
+    this.s.time.delayedCall(drawPinch?380:320,()=>{ if(this.dead) return;
       tw.forEach(t=>this.s.tweens.add({...t,duration:dur,ease:'Sine.InOut'}));
       // redraw the hand every frame so the fingertips follow the beads
       if(drawPinch) this.s.tweens.addCounter({from:0,to:1,duration:dur,onUpdate:()=>{if(!this.dead)drawPinch();}});
       sfx.clack(); if(pinch){sfx.pinch();this.toast(L().pinch);}
       this.s.time.delayedCall(dur+60,()=>{ if(this.dead) return;
         this.state[r]={h:h1,e:e1};[b.h,...b.e].forEach(im=>this.busy.delete(im));this.update(true);sfx.clack();
-        if(drawPinch) drawPinch();
-        used.forEach(f=>this.s.tweens.add({targets:f,alpha:0,duration:260}));
-        this.s.time.delayedCall(320,()=>cb&&cb());
+        if(drawPinch){ const mo=this.pinchMo; mo.slide=0; drawPinch();
+          this.s.tweens.add({targets:this.fPinch,alpha:0,delay:120,duration:340});
+          this.s.tweens.addCounter({from:0,to:1,delay:60,duration:420,ease:'Quad.In',onUpdate:t=>{mo.relax=t.getValue();if(!this.dead)drawPinch();}}); }
+        used.filter(f=>f!==this.fPinch).forEach(f=>this.s.tweens.add({targets:f,alpha:0,duration:260}));
+        this.s.time.delayedCall(drawPinch?520:320,()=>cb&&cb());
       });
     });
   }
