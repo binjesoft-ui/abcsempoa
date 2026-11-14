@@ -24,7 +24,8 @@ python3 -m http.server 8000
 | Mode | What kids do |
 |---|---|
 | 📚 **Belajar / Learn** | 10 short lessons with Ollie the Owl: bottom beads (1), top bead (5), the pinch, tens, adding, up to 999 |
-| 🎮 **Tantangan / Challenge** | 10 questions on a **full 13-rod sempoa** (scroll with the slider or ‹ ›): show a number, or work out a sum step by step — the ▶ follows your running total. Timer, ❓ Guide, 💡 Help (finger demo), ✔ Submit, ⏭ Skip, stars and best score |
+| 📅 **Tantangan Harian / Daily Challenge** | 10 new questions every day on a **full 13-rod sempoa** — the same set for every child that day. Shows ✅ done today and a 🔥 days-in-a-row streak |
+| 🏆 **Tantangan Mingguan / Weekly Challenge** | 10 harder questions, new every Monday (ISO week), with this week's best score |
 | 🎨 **Main Bebas / Free Play** | **👆 Geser Manik / Move Beads:** the full 13-rod sempoa that shows the number in digits and words. **🔢 Ketik Angka / Type a Number:** type any number up to 9 digits and watch the sempoa set it the proper way — clear first, then rod by rod from the left, with a caption for every move (push, pull, or pinch) |
 
 ## Controls / Kontrol
@@ -36,6 +37,13 @@ python3 -m http.server 8000
   - One finger or mouse: slide the top bead down **through the bar** onto the bottom bead you want.
 - Moving them one by one (with a pause between) counts as a wrong move in lessons and the challenge.
 - **⚙️ Options / Pengaturan** (top-right on every screen): language (Indonesia / English), layout (🖥️ mendatar / 📱 tegak), bead colour (🌈 colourful or 🟤 classic brown), sound on/off, and About (version, made by Binjesoft).
+
+## Daily & weekly challenges
+
+Both play on the full sempoa (scroll with the slider or ‹ ›): show a number, or work out a sum step by step — the ▶ follows your running total. Timer, ❓ Guide, 💡 Help (finger demo), ✔ Submit, ⏭ Skip.
+
+- Sets are generated from the date with a seeded generator, so they work offline and are identical for everyone.
+- `node tools/make-challenges.js` publishes upcoming sets to [`challenges/`](challenges/); a scheduled task runs it every evening. When the game is hosted from this repo it loads those files, so a day can be edited by hand — see [challenges/README.md](challenges/README.md).
 
 ## The full sempoa
 
@@ -50,11 +58,13 @@ index.html          the whole game (Phaser 3, single file)
 assets/mascot.svg   the ABC Sempoa kid mascot (vector)
 assets/mascot.png   the mascot as a PNG
 tests/              headless checks (run: node tests/test.js)
+tools/              make-challenges.js — publishes daily/weekly question files
+challenges/         published daily/ and weekly/ question sets
 ```
 
 ## Version
 
-2.2.0 — made by **Binjesoft**.
+2.3.0 — made by **Binjesoft**.
 
 ## Notes
 

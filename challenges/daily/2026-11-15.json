@@ -1,0 +1,78 @@
+{
+  "mode": "daily",
+  "key": "2026-11-15",
+  "seed": "abcsempoa:daily:2026-11-15",
+  "generator": "2.3.0",
+  "questions": [
+    {
+      "type": "build",
+      "answer": 2
+    },
+    {
+      "type": "build",
+      "answer": 56
+    },
+    {
+      "type": "calc",
+      "terms": [
+        7,
+        6
+      ],
+      "answer": 13
+    },
+    {
+      "type": "calc",
+      "terms": [
+        7,
+        -5
+      ],
+      "answer": 2
+    },
+    {
+      "type": "calc",
+      "terms": [
+        8,
+        -3,
+        9
+      ],
+      "answer": 14
+    },
+    {
+      "type": "build",
+      "answer": 220
+    },
+    {
+      "type": "calc",
+      "terms": [
+        37,
+        25
+      ],
+      "answer": 62
+    },
+    {
+      "type": "calc",
+      "terms": [
+        58,
+        -28
+      ],
+      "answer": 30
+    },
+    {
+      "type": "calc",
+      "terms": [
+        56,
+        90,
+        83
+      ],
+      "answer": 229
+    },
+    {
+      "type": "calc",
+      "terms": [
+        154,
+        -48
+      ],
+      "answer": 106
+    }
+  ]
+}

@@ -48,7 +48,7 @@ const calcHD=()=>clamp((window.devicePixelRatio||1)*Math.min((window.innerWidth|
 let HD=calcHD();
 let GAME=null, REOPEN_OPTS=false;
 const TEX_R=2; // bead textures are drawn at 2x and shown at half size
-const VERSION='2.2.1';
+const VERSION='2.3.0';
 const FONT="'Baloo 2', 'Nunito', Arial, sans-serif";
 const BODY="'Nunito', Arial, sans-serif";
 const C={teal:0x2f7f93,sky:0x4cc3e8,skyD:0x2a9fc4,orange:0xff6a1a,green:0x2ec27e,red:0xff4d6d,yellow:0xffd23f,
@@ -117,6 +117,9 @@ const I18N={
   placesFull:['Ones','Tens','Hundreds','Thousands','Ten-thousands','Hundred-thousands','Millions','Ten-millions','Hundred-millions','Billions'],
   placesDec:['Tenths','Hundredths','Thousandths'],
   guide:'Guide', help:'Help', submit:'Submit', skip:'Skip', time:'Time',
+  daily:'Daily Challenge', dailySub:'10 new questions every day', weekly:'Weekly Challenge', weeklySub:'New, harder questions every Monday',
+  dailyDone:'✅ Done today', streakDays:n=>`🔥 ${n} day${n>1?'s':''} in a row`, weeklyBest:n=>`Best this week: ${n}`,
+  modeD:'📅 Daily', modeW:'🏆 Weekly',
   layout:'Layout', landscape:'🖥️ Landscape', portrait:'📱 Portrait',
   rotP:'Turn your device upright', rotL:'Turn your device sideways', useP:'📱 Use portrait layout', useL:'🖥️ Use landscape layout',
   showNum:'Show this number:', yourBeads:v=>`Your sempoa: ${v}`, skipped:'Skipped ⏭', skippedR:'⏭ skipped',
@@ -175,6 +178,9 @@ const I18N={
   placesFull:['Satuan','Puluhan','Ratusan','Ribuan','Puluh ribuan','Ratus ribuan','Jutaan','Puluh jutaan','Ratus jutaan','Miliaran'],
   placesDec:['Persepuluhan','Perseratusan','Perseribuan'],
   guide:'Panduan', help:'Bantuan', submit:'Kirim', skip:'Lewati', time:'Waktu',
+  daily:'Tantangan Harian', dailySub:'10 soal baru setiap hari', weekly:'Tantangan Mingguan', weeklySub:'Soal baru yang lebih sulit setiap Senin',
+  dailyDone:'✅ Sudah selesai hari ini', streakDays:n=>`🔥 ${n} hari berturut-turut`, weeklyBest:n=>`Terbaik minggu ini: ${n}`,
+  modeD:'📅 Harian', modeW:'🏆 Mingguan',
   layout:'Tampilan', landscape:'🖥️ Mendatar', portrait:'📱 Tegak',
   rotP:'Putar HP-mu ke posisi tegak', rotL:'Putar HP-mu ke posisi mendatar', useP:'📱 Pakai tampilan tegak', useL:'🖥️ Pakai tampilan mendatar',
   showNum:'Tunjukkan angka ini:', yourBeads:v=>`Sempoamu: ${v}`, skipped:'Dilewati ⏭', skippedR:'⏭ dilewati',
@@ -914,19 +920,22 @@ class Home extends Phaser.Scene{
     txt(this,bx,by,'SEMPOA',60,'#ffffff',{stroke:'#0d47a1',st:8});
     txt(this,P?360:330,P?510:610,T.tagline,22,'#5b6b77',{body:true,weight:'700'});
     // ---- modes ----
-    const cx=P?360:960, cw=P?620:540, ch=P?150:140, ex=P?-232:-200, tx=P?-160:-130;
+    const cx=P?360:960, cw=P?620:540, ch=P?124:116, ex=P?-232:-202, tx=P?-164:-140;
     const card=(y,color,emoji,t,sub,cb,k)=>{
-      const b=btn(this,cx,y,cw,ch,color,'',cb,{radius:32});
-      const e=txt(this,ex,0,emoji,66); const a=txt(this,tx,-26,t,42,'#ffffff',{ox:0}); const s=txt(this,tx,28,sub,19,'#ffffff',{ox:0,body:true,weight:'700',wrap:cw-200,align:'left'});
-      [e,a,s].forEach(o=>{o.baseY=o.y;}); b.add([e,a,s]); b.extra=[e,a,s];
-      b.setScale(0); this.tweens.add({targets:b,scale:1,duration:450,delay:k*150,ease:'Back.Out'});
+      const b=btn(this,cx,y,cw,ch,color,'',cb,{radius:30});
+      const e=txt(this,ex,0,emoji,56); const a=txt(this,tx,-22,t,34,'#ffffff',{ox:0}); const sb=txt(this,tx,24,sub,17,'#ffffff',{ox:0,body:true,weight:'700',wrap:cw-190,align:'left'});
+      [e,a,sb].forEach(o=>{o.baseY=o.y;}); b.add([e,a,sb]); b.extra=[e,a,sb];
+      b.setScale(0); this.tweens.add({targets:b,scale:1,duration:450,delay:k*120,ease:'Back.Out'});
     };
-    const ys=P?[650,825,1000]:[190,355,520];
+    const wb=progress.best('weekly',weekKey()), st=progress.streak();
+    const dailySub=(progress.doneToday()?T.dailyDone:T.dailySub)+(st?' · '+T.streakDays(st):'');
+    const ys=P?[640,780,920,1060]:[150,282,414,546];
     card(ys[0],C.blue,'📚',T.learn,T.learnSub,()=>this.scene.start('Learn',{i:0}),0);
-    card(ys[1],C.orange,'🎮',T.play,T.playSub,()=>this.scene.start('Challenge'),1);
-    card(ys[2],C.green,'🎨',T.free,T.freeSub,()=>this.scene.start('Free'),2);
+    card(ys[1],C.orange,'📅',T.daily,dailySub,()=>startChallenge(this,'daily'),1);
+    card(ys[2],C.purple,'🏆',T.weekly,T.weeklySub+(wb?' · '+T.weeklyBest(wb):''),()=>startChallenge(this,'weekly'),2);
+    card(ys[3],C.green,'🎨',T.free,T.freeSub,()=>this.scene.start('Free'),3);
     const best=+store.get('sempoaBest','0');
-    if(best) txt(this,cx,P?1130:650,T.best(best),20,'#8c99a3',{body:true});
+    if(best) txt(this,cx,P?1150:640,T.best(best),20,'#8c99a3',{body:true});
   }
 }
 
@@ -1013,29 +1022,96 @@ class Cert extends Phaser.Scene{
     const cx=P?GW/2:850;
     txt(this,cx,P?700:220,T.certT,56,'#ff6a1a');
     txt(this,cx,P?800:320,T.certB,26,'#24323d',{body:true,wrap:620});
-    btn(this,cx,P?960:460,420,90,C.orange,T.tryChallenge,()=>this.scene.start('Challenge'),{size:32});
+    btn(this,cx,P?960:460,420,90,C.orange,T.tryChallenge,()=>startChallenge(this,'daily'),{size:32});
     btn(this,cx,P?1080:580,280,74,0xffffff,T.home,()=>this.scene.start('Home'),{white:true,textColor:'#2f7f93',size:26});
     const b=confetti(this); sfx.win(); b(200); this.time.delayedCall(700,()=>b(150));
   }
 }
 
 // ---------------------------------------------------------------- CHALLENGE (full sempoa practice)
-const PPLAN=[{t:'build',a:[1]},{t:'build',a:[2]},{t:'calc',a:[1,1],ops:'+'},{t:'calc',a:[1,1],ops:'-'},{t:'calc',a:[1,1,1]},
-  {t:'build',a:[3]},{t:'calc',a:[2,2],ops:'+'},{t:'calc',a:[2,2],ops:'-'},{t:'calc',a:[2,2,2]},{t:'calc',a:[3,2]}];
-const rndDigits=d=>d===1?rnd(1,9):rnd(10**(d-1),10**d-1);
-function makeQ(P){
-  if(P.t==='build') return {type:'build',answer:rndDigits(P.a[0])};
+// <challenge-generator>  — also run by tools/make-challenges.js, so keep it self-contained
+// Daily and weekly sets come from a seeded random generator: everyone gets the same 10 questions
+// on the same day / in the same week, and new ones appear by themselves.
+const PLANS={
+  daily:[{t:'build',a:[1]},{t:'build',a:[2]},{t:'calc',a:[1,1],ops:'+'},{t:'calc',a:[1,1],ops:'-'},{t:'calc',a:[1,1,1]},
+    {t:'build',a:[3]},{t:'calc',a:[2,2],ops:'+'},{t:'calc',a:[2,2],ops:'-'},{t:'calc',a:[2,2,2]},{t:'calc',a:[3,2]}],
+  weekly:[{t:'build',a:[2]},{t:'build',a:[3]},{t:'calc',a:[2,2],ops:'+'},{t:'calc',a:[2,2],ops:'-'},{t:'calc',a:[2,2,2]},
+    {t:'build',a:[4]},{t:'calc',a:[3,2],ops:'+'},{t:'calc',a:[3,2],ops:'-'},{t:'calc',a:[3,2,2]},{t:'calc',a:[3,3]}]
+};
+function seededRng(str){ // FNV-1a hash of the seed → mulberry32
+  let h=2166136261>>>0; for(let i=0;i<str.length;i++){h^=str.charCodeAt(i);h=Math.imul(h,16777619)>>>0;}
+  let a=h; return ()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};
+}
+function makeQ(P,R=Math.random){
+  const ri=(a,b)=>a+Math.floor(R()*(b-a+1)), rd=d=>d===1?ri(1,9):ri(10**(d-1),10**d-1);
+  if(P.t==='build') return {type:'build',answer:rd(P.a[0])};
   for(let t=0;t<500;t++){
-    const terms=[rndDigits(P.a[0])],totals=[terms[0]]; let tot=terms[0],ok=true;
+    const terms=[rd(P.a[0])],totals=[terms[0]]; let tot=terms[0],ok=true;
     for(let i=1;i<P.a.length;i++){
-      const op=P.ops||pickOne(['+','-']),v=rndDigits(P.a[i]),nt=op==='+'?tot+v:tot-v;
+      const op=P.ops||(R()<.5?'+':'-'),v=rd(P.a[i]),nt=op==='+'?tot+v:tot-v;
       if(nt<0||nt>9999){ok=false;break;}
       terms.push(op==='+'?v:-v); tot=nt; totals.push(tot);
     }
     if(ok) return {type:'calc',terms,totals,answer:tot};
   }
-  return {type:'build',answer:rnd(1,9)};
+  return {type:'build',answer:ri(1,9)};
 }
+const seedFor=(mode,key)=>`abcsempoa:${mode}:${key}`;
+function makeSet(mode,key){ const R=key?seededRng(seedFor(mode,key)):Math.random; return PLANS[mode].map(p=>makeQ(p,R)); }
+const pad2=n=>String(n).padStart(2,'0');
+function dayKey(d=new Date()){return `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;}
+function weekKey(d=new Date()){ // ISO week, weeks start on Monday
+  const t=new Date(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate())),day=t.getUTCDay()||7;
+  t.setUTCDate(t.getUTCDate()+4-day);
+  const y=t.getUTCFullYear(),w=Math.ceil(((t-Date.UTC(y,0,1))/86400000+1)/7);
+  return `${y}-W${pad2(w)}`;
+}
+// a published question file is used only if every question is well-formed
+function validSet(qs){
+  return Array.isArray(qs)&&qs.length===10&&qs.every(q=>{
+    if(!q||!Number.isInteger(q.answer)||q.answer<0||q.answer>9999) return false;
+    if(q.type==='build') return true;
+    if(q.type!=='calc'||!Array.isArray(q.terms)||q.terms.length<2||q.terms.length>3) return false;
+    let t=0;const totals=q.terms.map(v=>t+=v);
+    return q.terms.every(Number.isInteger)&&totals.every(v=>v>=0&&v<=9999)&&t===q.answer;
+  });
+}
+// </challenge-generator>
+const withTotals=qs=>qs.map(q=>q.type==='calc'?{...q,totals:(t=>q.terms.map(v=>t+=v))(0)}:{...q});
+// Use the published file for today/this week when the game is hosted next to it (GitHub Pages);
+// otherwise generate the identical set here.
+async function loadSet(mode){
+  const key=mode==='weekly'?weekKey():dayKey();
+  try{
+    const ctl=typeof AbortController!=='undefined'?new AbortController():null;
+    const tm=setTimeout(()=>ctl&&ctl.abort(),1500);
+    const r=await fetch(`challenges/${mode}/${key}.json`,{cache:'no-store',signal:ctl&&ctl.signal}); clearTimeout(tm);
+    if(r.ok){const j=await r.json(); if(validSet(j.questions)) return {mode,key,qs:withTotals(j.questions),source:'file'};}
+  }catch(e){}
+  return {mode,key,qs:makeSet(mode,key),source:'generated'};
+}
+function startChallenge(scene,mode){
+  if(scene._loading) return; scene._loading=true;
+  loadSet(mode).then(set=>{ if(scene.sys.isActive()) scene.scene.start('Challenge',set); });
+}
+// daily streak + best scores, kept in this browser
+const progress={
+  get(){try{return JSON.parse(store.get('sempoaProgress','{}'))||{}}catch(e){return {}}},
+  save(p){store.set('sempoaProgress',JSON.stringify(p));},
+  record(mode,key,score){
+    const p=this.get(); p.best=p.best||{}; const id=mode+':'+key;
+    p.best[id]=Math.max(p.best[id]||0,score);
+    if(mode==='daily'){
+      const y=new Date();y.setDate(y.getDate()-1);
+      if(p.lastDaily!==key){p.streak=p.lastDaily===dayKey(y)?(p.streak||0)+1:1;p.lastDaily=key;}
+    }
+    this.save(p); return p;
+  },
+  streak(){const p=this.get(),y=new Date();y.setDate(y.getDate()-1);
+    return p.lastDaily===dayKey()||p.lastDaily===dayKey(y)?(p.streak||0):0;},
+  doneToday(){return this.get().lastDaily===dayKey();},
+  best(mode,key){return (this.get().best||{})[mode+':'+key]||0;}
+};
 const fmtTerm=(v,i)=>i===0?String(v):(v<0?`− ${-v}`:`+ ${v}`);
 const fmtExpr=Q=>Q.type==='build'?String(Q.answer):Q.terms.map(fmtTerm).join(' ')+` = ${Q.answer}`;
 const fmtTime=s=>`${String(Math.floor(s/60)).padStart(2,'0')}:${String(Math.floor(s%60)).padStart(2,'0')}`;
@@ -1045,7 +1121,8 @@ class Challenge extends Phaser.Scene{
   constructor(){super('Challenge')}
   create(data){
     drawBg(this); const T=L(),P=PORTRAIT;
-    this.qs=PPLAN.map(makeQ); this.qi=0; this.score=0; this.combo=1; this.streak=0; this.best=0; this.correct=0; this.results=[];
+    this.mode=data&&data.mode||'daily'; this.key=data&&data.key||(this.mode==='weekly'?weekKey():dayKey());
+    this.qs=data&&data.qs?withTotals(data.qs):makeSet(this.mode,this.key); this.qi=0; this.score=0; this.combo=1; this.streak=0; this.best=0; this.correct=0; this.results=[];
     this.tStart=this.time.now; this.burst=confetti(this);
     if(P){
       // ---- portrait: top bar, the sum in a panel, sempoa, buttons along the bottom ----
@@ -1054,8 +1131,9 @@ class Challenge extends Phaser.Scene{
       this.timeT=txt(this,212,52,'⏱ 00:00',21,'#5b6b77',{ox:0,body:true});
       this.scoreT=txt(this,388,52,'⭐ 0',22,'#24323d',{ox:0});
       this.comboT=txt(this,512,52,'🔥 x1',22,'#e0520a',{ox:0});
-      optionsButton(this,{},T.restartNote,GW-62,52);
+      optionsButton(this,{mode:this.mode,key:this.key,qs:this.qs},T.restartNote,GW-62,52);
       panel(this,26,94,GW-52,272,0xf3fbfe,0xcdeefa,24);
+      txt(this,GW-44,118,this.modeLabel(),18,'#2f7f93',{ox:1,body:true});
       this.L={buildLabel:[GW/2,128],buildNum:[GW/2,236],rowX0:196,rowW:328,rowY0:136,rowStep:56,
         abCX:GW/2,abTop:402,viewW:600,capY:972};
       const bx=[106,262,450,620],by=1086;
@@ -1066,10 +1144,11 @@ class Challenge extends Phaser.Scene{
       btn(this,74,68,70,54,0xffffff,'✕',()=>this.scene.start('Home'),{white:true,size:28,textColor:'#24323d'});
       this.progT=txt(this,288,68,'1/10',32,'#24323d',{ox:1});
       this.timeT=txt(this,288,110,'⏱ 00:00',22,'#5b6b77',{ox:1,body:true});
+      txt(this,48,110,this.modeLabel(),18,'#2f7f93',{ox:0,body:true});
       const dg=this.add.graphics();dg.lineStyle(3,C.line,1).lineBetween(44,140,290,140);
       this.scoreT=txt(this,48,GH-62,'⭐ 0',24,'#24323d',{ox:0});
       this.comboT=txt(this,288,GH-62,'🔥 x1',24,'#e0520a',{ox:1});
-      optionsButton(this,{},T.restartNote,GW-66,52);
+      optionsButton(this,{mode:this.mode,key:this.key,qs:this.qs},T.restartNote,GW-66,52);
       this.L={buildLabel:[48,180,0],buildNum:[167,290],rowX0:40,rowW:254,rowY0:180,rowStep:64,
         abCX:736,abTop:78,viewW:760,capY:GH-46};
       this.sideBtns([GW-66,GW-66,GW-66,GW-66],[170,300,440,590],false);
@@ -1078,6 +1157,7 @@ class Challenge extends Phaser.Scene{
     this.objs=[]; this.loadQ();
     if(data&&data._opts) openOptions(this,data,T.restartNote);
   }
+  modeLabel(){const T=L();return this.mode==='weekly'?T.modeW:T.modeD;}
   // ❓ Guide · 💡 Help · ✔ Submit · ⏭ Skip
   sideBtns(xs,ys,row){
     const T=L(),y=i=>row?ys:ys[i];
@@ -1180,7 +1260,8 @@ class Challenge extends Phaser.Scene{
     this.sh=sheet(this,{kind,emoji,title,body,btnLabel:last?'🏆':T.next,onBtn:()=>{
       if(last){
         const b=+store.get('sempoaBest','0');if(this.score>b)store.set('sempoaBest',String(this.score));
-        this.scene.start('Result',{score:this.score,correct:this.correct,best:this.best,results:this.results,time:(this.time.now-this.tStart)/1000});
+        progress.record(this.mode,this.key,this.score);
+        this.scene.start('Result',{mode:this.mode,key:this.key,score:this.score,correct:this.correct,best:this.best,results:this.results,time:(this.time.now-this.tStart)/1000});
       } else if(this.answered&&this.qi<this.qs.length-1){this.qi++;this.loadQ();}
     }});
   }
@@ -1192,18 +1273,19 @@ class Result extends Phaser.Scene{
   create(d){
     drawBg(this); topBar(this,'',{data:d}); const T=L(),P=PORTRAIT;
     const st=d.correct>=8?3:d.correct>=6?2:d.correct>=3?1:0, cx=P?GW/2:330;
-    txt(this,cx,110,T.results,28,'#2a9fc4');
+    txt(this,cx,110,(d.mode==='weekly'?T.modeW:T.modeD)+' · '+T.results,26,'#2a9fc4');
     txt(this,cx,168,d.correct===10?T.perfect:T.endTitles[st],46,'#ff6a1a');
     for(let k=0;k<3;k++){const s=txt(this,cx+(k-1)*120,270,'⭐',90).setAlpha(.25).setScale(.6);
       if(k<st) this.time.delayedCall(400+k*350,()=>{s.setAlpha(1);this.tweens.add({targets:s,scale:1,duration:350,ease:'Back.Out'});sfx.star(k);});}
-    txt(this,cx,360,T.endMsgs[st],21,'#5b6b77',{body:true,wrap:P?620:520});
+    txt(this,cx,350,T.endMsgs[st],21,'#5b6b77',{body:true,wrap:P?620:520});
+    txt(this,cx,388,d.mode==='weekly'?T.weeklyBest(progress.best('weekly',d.key)):T.streakDays(Math.max(1,progress.streak())),19,'#e0520a',{body:true});
     const sx=P?(GW-3*190-2*14)/2:60,sw=P?190:170;
     [[d.correct+'/10',T.correct],[d.score,T.points],[fmtTime(d.time||0),T.time]].forEach(([v,l],k)=>{
-      const x=sx+k*(sw+14);panel(this,x,410,sw,110,0xf3fbfe,null,20);
-      txt(this,x+sw/2,450,String(v),38,'#ff6a1a');txt(this,x+sw/2,494,l,18,'#6b7a85',{body:true});});
+      const x=sx+k*(sw+14);panel(this,x,418,sw,104,0xf3fbfe,null,20);
+      txt(this,x+sw/2,454,String(v),38,'#ff6a1a');txt(this,x+sw/2,496,l,18,'#6b7a85',{body:true});});
     const bY=P?1196:620;
     btn(this,P?200:190,bY,240,76,0xffffff,T.home,()=>this.scene.start('Home'),{white:true,textColor:'#2f7f93',size:26});
-    btn(this,P?500:470,bY,280,76,C.orange,T.playAgain,()=>this.scene.start('Challenge'),{size:28});
+    btn(this,P?500:470,bY,280,76,C.orange,T.playAgain,()=>startChallenge(this,d.mode||'daily'),{size:28});
     const lx=P?40:640,ly=P?550:80,lw=P?GW-80:600,step=P?56:56;
     panel(this,lx,ly,lw,10*step+40,0xffffff,C.line,22);
     d.results.forEach((r,k)=>{const y=ly+38+k*step;

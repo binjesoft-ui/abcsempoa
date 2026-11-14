@@ -2,7 +2,7 @@
 const fs=require('fs');
 const html=fs.readFileSync(process.argv[2]||require('path').join(__dirname,'..','index.html'),'utf8');
 let body=html.split('<script>\nfunction SEMPOA(){')[1].split('\n// wait for the engine')[0];
-body=body.replace('fontsReady.then(()=>startGame());','globalThis.__T={setOrient:o=>{ORIENT=o;PORTRAIT=o==="portrait";GW=PORTRAIT?720:1280;GH=PORTRAIT?1280:720;},Boot,Home,Learn,Cert,Challenge,Result,Free,Abacus,makeQ,PPLAN,LESSONS,I18N,setLang:l=>{LANG=l}};');
+body=body.replace('fontsReady.then(()=>startGame());','globalThis.__T={setOrient:o=>{ORIENT=o;PORTRAIT=o==="portrait";GW=PORTRAIT?720:1280;GH=PORTRAIT?1280:720;},Boot,Home,Learn,Cert,Challenge,Result,Free,Abacus,makeQ,PLANS,makeSet,dayKey,weekKey,loadSet,validSet,progress,LESSONS,I18N,setLang:l=>{LANG=l}};');
 body=body.replace(/\}\s*$/,''); // drop closing brace of SEMPOA
 
 let queue=[];
@@ -54,6 +54,6 @@ function runQueue(scene,ms=60000){ // advance fake time, running timers in order
 global.Phaser={Scene,Display:{Color:{ValueToColor:()=>({darken:()=>({color:0})})}},AUTO:0,Scale:{FIT:0,CENTER_BOTH:0}};
 global.window=global; global.document={fonts:null,getElementById:()=>null};
 global.Image=class{set src(v){this.onload&&this.onload();}};
-global.localStorage={getItem:()=>null,setItem:()=>{}};
+const mem={}; global.localStorage={getItem:k=>k in mem?mem[k]:null,setItem:(k,v)=>{mem[k]=String(v)},clear:()=>{for(const k in mem)delete mem[k]}};
 new Function(body)();
 module.exports={T:global.__T,runQueue,resetQueue:()=>{queue=[]}};

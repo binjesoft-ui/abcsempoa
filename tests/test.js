@@ -75,18 +75,62 @@ ch.qi++; ch.loadQ(); ch.skip(); ok(ch.results[1].skipped,'skip records a skipped
 ch.qi++; ch.loadQ(); ch.help(); runQueue(ch,60000); ok(!ch.ab.demoing,'help demo finishes');
 }
 T.setOrient('landscape');
-// generator: 5000 sets, answers in range, totals consistent
-let bad=0; for(let n=0;n<5000;n++) T.PPLAN.map(T.makeQ).forEach(q=>{
+// generator: 5000 random sets of each kind
+let bad=0; for(let n=0;n<5000;n++) ['daily','weekly'].forEach(m=>T.makeSet(m).forEach(q=>{
   if(q.answer<0||q.answer>9999) bad++;
-  if(q.type==='calc'&&q.terms.reduce((a,b)=>a+b,0)!==q.answer) bad++; });
-ok(bad===0,'5000 challenge sets: all answers valid ('+bad+' bad)');
+  if(q.type==='calc'&&q.terms.reduce((a,b)=>a+b,0)!==q.answer) bad++; }));
+ok(bad===0,'5000 random daily + weekly sets: all answers valid ('+bad+' bad)');
+
+// ---------- daily / weekly sets ----------
+const J=x=>JSON.stringify(x);
+ok(J(T.makeSet('daily','2026-11-14'))===J(T.makeSet('daily','2026-11-14')),'same day → exactly the same 10 questions');
+ok(J(T.makeSet('daily','2026-11-14'))!==J(T.makeSet('daily','2026-11-15')),'next day → different questions');
+ok(J(T.makeSet('weekly','2026-W46'))!==J(T.makeSet('weekly','2026-W47')),'next week → different questions');
+ok(T.dayKey(new Date(2026,10,14))==='2026-11-14','dayKey 14 Nov 2026');
+ok(T.weekKey(new Date(2026,10,14))==='2026-W46'&&T.weekKey(new Date(2026,10,15))==='2026-W46'&&T.weekKey(new Date(2026,10,16))==='2026-W47','weekKey: Sat/Sun stay in W46, Monday starts W47');
+ok(T.weekKey(new Date(2027,0,1))==='2026-W53'&&T.weekKey(new Date(2027,0,4))==='2027-W01','weekKey around New Year (1 Jan 2027 = 2026-W53)');
+let allValid=true; for(let d=0;d<730;d++){const dt=new Date(2026,0,1+d);
+  if(!T.validSet(T.makeSet('daily',T.dayKey(dt)))||!T.validSet(T.makeSet('weekly',T.weekKey(dt)))) allValid=false;}
+ok(allValid,'2 years of daily + weekly sets are all valid');
+ok(!T.validSet([{type:'calc',terms:[5,-3],answer:9}].concat(Array(9).fill({type:'build',answer:3}))),'a broken published file is rejected');
+// a set with 3-term sums must fit the sum panel; the weekly plan never has more than 3 terms
+ok(['daily','weekly'].every(m=>T.PLANS[m].every(p=>p.a.length<=3)),'no plan has more than 3 numbers in a sum');
+(async()=>{
+  const set=await T.loadSet('daily');
+  ok(set.source==='generated'&&J(set.qs.map(q=>q.answer))===J(T.makeSet('daily',T.dayKey()).map(q=>q.answer)),'loadSet falls back to the generated set when no file is published');
+  // ---------- streaks ----------
+  localStorage.clear(); const y=new Date();y.setDate(y.getDate()-1);
+  T.progress.record('daily',T.dayKey(),800); ok(T.progress.streak()===1&&T.progress.doneToday(),'first daily → streak 1, done today');
+  T.progress.record('daily',T.dayKey(),500); ok(T.progress.streak()===1&&T.progress.best('daily',T.dayKey())===800,'replaying today keeps streak 1 and the best score 800');
+  localStorage.setItem('sempoaProgress',JSON.stringify({lastDaily:T.dayKey(y),streak:3}));
+  T.progress.record('daily',T.dayKey(),600); ok(T.progress.streak()===4,'played yesterday (3 days) + today → 4 days in a row');
+  const old=new Date();old.setDate(old.getDate()-3);
+  localStorage.setItem('sempoaProgress',JSON.stringify({lastDaily:T.dayKey(old),streak:9}));
+  ok(T.progress.streak()===0,'missed a day → streak shows 0'); T.progress.record('daily',T.dayKey(),100); ok(T.progress.streak()===1,'…and restarts at 1');
+  // ---------- screens with weekly/daily data ----------
+  for(const orient of ['landscape','portrait']){ T.setOrient(orient);
+    const w=await T.loadSet('weekly'); const c=new T.Challenge(); c.create(w);
+    ok(c.mode==='weekly'&&c.qs.length===10,'weekly challenge opens · '+orient);
+    const h=new T.Home(); h.create({}); ok(true,'Home with streak + weekly best builds · '+orient);
+    const r=new T.Result(); r.create({mode:'weekly',key:w.key,score:500,correct:7,best:3,time:90,results:c.qs.map(Q=>({Q,ok:true}))}); ok(true,'weekly result builds · '+orient);
+  }
+  // ---------- published files (GitHub Pages): an edited file is used, a broken one is ignored ----------
+  const custom=Array(10).fill(0).map((_,i)=>i%2?{type:'build',answer:i}:{type:'calc',terms:[10,i],answer:10+i});
+  global.fetch=async()=>({ok:true,json:async()=>({questions:custom})});
+  let fs1=await T.loadSet('daily'); ok(fs1.source==='file'&&fs1.qs[0].answer===10&&J(fs1.qs[0].totals)===J([10,10]),'an edited published file is used (with running totals)');
+  global.fetch=async()=>({ok:true,json:async()=>({questions:[{type:'calc',terms:[1,2],answer:99}]})});
+  fs1=await T.loadSet('daily'); ok(fs1.source==='generated','a broken published file is ignored');
+  global.fetch=async()=>({ok:false}); fs1=await T.loadSet('weekly'); ok(fs1.source==='generated','no file for this week → generated');
+  delete global.fetch;
+  console.log(process.exitCode?'\nSOME CHECKS FAILED':'\nALL CHECKS PASSED');
+})();
 
 // ---------- play all 10 questions, answering every one (catches stale references) ----------
-for(const orient of ['landscape','portrait']) for(const how of ['submit','skip']){
-  T.setOrient(orient); const c=new T.Challenge(); c.create({}); let err=null;
+for(const mode of ['daily','weekly']) for(const orient of ['landscape','portrait']) for(const how of ['submit','skip']){
+  T.setOrient(orient); const c=new T.Challenge(); c.create({mode}); let err=null;
   try{ for(let q=0;q<10;q++){ const Q=c.qs[c.qi]; c.ab.set(Q.answer,true);
        if(how==='submit') c.submit(); else c.skip(); runQueue(c,3000); if(q<9){c.qi++;c.loadQ();} } }
   catch(e){err=e.message+' (question '+(c.qi+1)+')';}
-  ok(!err,'all 10 questions via '+how+' · '+orient+(err?' → '+err:''));
+  ok(!err,mode+': all 10 questions via '+how+' · '+orient+(err?' → '+err:''));
 }
 T.setOrient('landscape');
