@@ -57,6 +57,7 @@ Both play on the full sempoa (scroll with the slider or ‹ ›): show a number,
 index.html          the whole game (Phaser 3, single file)
 assets/mascot.svg   the ABC Sempoa kid mascot (vector)
 assets/mascot.png   the mascot as a PNG
+assets/thumb.png    the thumb hand used in finger demos
 tests/              headless checks (run: node tests/test.js)
 tools/              make-challenges.js — publishes daily/weekly question files
 challenges/         published daily/ and weekly/ question sets
@@ -64,7 +65,7 @@ challenges/         published daily/ and weekly/ question sets
 
 ## Version
 
-2.3.0 — made by **Binjesoft**.
+2.3.1 — made by **Binjesoft**.
 
 ## Notes
 

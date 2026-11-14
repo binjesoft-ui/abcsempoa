@@ -57,6 +57,10 @@ ab.set(0,true); ab.sorobanTo(1205,t=>caps.push(t),()=>done=true); runQueue(s,600
 ok(done&&ab.value()===1205,'Ketik Angka 1205 ends at 1205 (value='+ab.value()+')');
 console.log('     captions:',caps.join(' | '));
 
+// ---------- the thumb hand pushes bottom beads up in demos ----------
+{ ab.set(0,true); const shown=[]; const orig=ab.s.tweens.add; ab.s.tweens.add=(c)=>{if(c&&c.targets===ab.fHand&&c.alpha===1)shown.push('hand');return orig(c);};
+  ab.demo(3,()=>{},()=>{}); runQueue(s,60000); ab.s.tweens.add=orig;
+  ok(ab.fHand&&shown.length>0,'the thumb-hand picture appears when pushing bottom beads up'); }
 // ---------- Contohkan / Help demo returns the beads ----------
 ab.set(12,true); let d2=false; ab.demo(17,()=>{},()=>d2=true); runQueue(s,60000);
 ok(d2&&ab.value()===12,'demo shows 12→17 then puts the beads back at 12');
