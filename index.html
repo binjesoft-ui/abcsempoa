@@ -48,7 +48,7 @@ const calcHD=()=>clamp((window.devicePixelRatio||1)*Math.min((window.innerWidth|
 let HD=calcHD();
 let GAME=null, REOPEN_OPTS=false;
 const TEX_R=2; // bead textures are drawn at 2x and shown at half size
-const VERSION='2.4.1';
+const VERSION='2.4.2';
 const FONT="'Baloo 2', 'Nunito', Arial, sans-serif";
 const BODY="'Nunito', Arial, sans-serif";
 const C={teal:0x2f7f93,sky:0x4cc3e8,skyD:0x2a9fc4,orange:0xff6a1a,green:0x2ec27e,red:0xff4d6d,yellow:0xffd23f,
@@ -511,6 +511,46 @@ function drawPinchHand(ctx,S,ox,oy,A,B,o={}){
   nail(th[2],th[3],28,Tw[3],-1);      // thumb nail
 }
 const PINCH_S=1.5; // pixels per sempoa unit for the pinch-hand canvas
+// Jepit hint: the hand is shown small in a bubble beside the rod (it does not touch the beads),
+// closing index finger and thumb from wide apart to together while the beads slide to the bar.
+const ICON_K=0.4, ICON_U=480;               // hand drawn in a 480×480 "hand unit" box, shown at 40%
+const ICON_SIZE=ICON_U*ICON_K;              // bubble size in sempoa units (192)
+function drawPinchIcon(ctx,t){ // t: 0 = fingers wide apart, 1 = pinched together
+  const S=PINCH_S*ICON_K, X=v=>v*S, Y=v=>v*S, U=ICON_U;
+  const SKIN='#f6c03c', SHADE='#eaa830', LINE='#cf8d22', NAIL='#fce4a4', NAIL_LINE='#e3ac45';
+  const lerp=(a,b)=>a+(b-a)*t, rad=d=>d*Math.PI/180, add=(p,dx,dy)=>({x:p.x+dx,y:p.y+dy});
+  const P={x:322,y:252};
+  // index swings down from above, thumb swings up from below; each bends a little at its middle joint
+  const bone=(b,len,deg)=>add(b,len*Math.cos(rad(deg)),len*Math.sin(rad(deg)));
+  const Ib={x:236,y:178}, ia=lerp(208,175), I1=bone(Ib,100,ia), I2=bone(I1,95,ia-24);
+  const Tb={x:252,y:326}, ta=lerp(152,186), T1=bone(Tb,95,ta), T2=bone(T1,85,ta+20);
+  const curl=[add(P,-112,-22),add(P,-118,14),add(P,-108,50)];
+  const capsule=(p,q,r1,r2)=>{const a=Math.atan2(q.y-p.y,q.x-p.x),n={x:-Math.sin(a),y:Math.cos(a)};
+    ctx.beginPath();ctx.moveTo(X(p.x+n.x*r1),Y(p.y+n.y*r1));ctx.lineTo(X(q.x+n.x*r2),Y(q.y+n.y*r2));
+    ctx.arc(X(q.x),Y(q.y),r2*S,a+Math.PI/2,a-Math.PI/2,true);ctx.lineTo(X(p.x-n.x*r1),Y(p.y-n.y*r1));
+    ctx.arc(X(p.x),Y(p.y),r1*S,a-Math.PI/2,a+Math.PI/2,true);ctx.closePath();ctx.fill();};
+  const ell=(c,rx,ry,rot)=>{ctx.beginPath();ctx.ellipse(X(c.x),Y(c.y),rx*S,ry*S,rot,0,Math.PI*2);ctx.fill();};
+  const body=g=>{
+    ctx.fillRect(X(P.x-10),Y(P.y-70-g),X(U-P.x+20),(170+2*g)*S);                       // wrist, cut by the bubble edge
+    ell(P,106+g,110+g,-0.25);
+    curl.forEach((c,k)=>capsule(add(c,50,0),c,31+g,27+g-k*2));
+    capsule(Ib,I1,33+g,29+g);capsule(I1,I2,29+g,26+g);
+    capsule(Tb,T1,38+g,33+g);capsule(T1,T2,33+g,29+g);
+  };
+  ctx.clearRect(0,0,ctx.canvas.width,ctx.canvas.height);
+  ctx.save(); ctx.beginPath(); ctx.roundRect?ctx.roundRect(0,0,X(U),Y(U),X(85)):ctx.rect(0,0,X(U),Y(U)); ctx.clip();
+  ctx.fillStyle=LINE; body(3.5); ctx.fillStyle=SKIN; body(0);
+  ctx.save(); ctx.globalAlpha=.5; ctx.fillStyle=SHADE; ell(add(P,40,72),74,26,-0.25); ctx.restore();
+  ctx.strokeStyle=LINE; ctx.lineWidth=2.6*S; ctx.lineCap='round';
+  const crease=(p,a,len)=>{const n={x:-Math.sin(a),y:Math.cos(a)};ctx.beginPath();ctx.moveTo(X(p.x+n.x*len),Y(p.y+n.y*len));ctx.lineTo(X(p.x-n.x*len*0.35),Y(p.y-n.y*len*0.35));ctx.stroke();};
+  crease(I1,rad(ia-12),13); crease(T1,rad(ta+10),-13);
+  curl.slice(0,2).forEach(c=>{const d=add(c,8,18);ctx.beginPath();ctx.moveTo(X(d.x-18),Y(d.y));ctx.quadraticCurveTo(X(d.x),Y(d.y+4),X(d.x+30),Y(d.y-1));ctx.stroke();});
+  ctx.beginPath();ctx.moveTo(X(P.x-40),Y(P.y+60));ctx.quadraticCurveTo(X(P.x-10),Y(P.y+32),X(P.x+8),Y(P.y-12));ctx.stroke();
+  const nail=(p,q,side)=>{const a=Math.atan2(q.y-p.y,q.x-p.x),n={x:-Math.sin(a),y:Math.cos(a)},c=add(q,-Math.cos(a)*6+n.x*side*7,-Math.sin(a)*6+n.y*side*7);
+    ctx.save();ctx.fillStyle=NAIL;ctx.strokeStyle=NAIL_LINE;ctx.lineWidth=1.8*S;ctx.beginPath();ctx.ellipse(X(c.x),Y(c.y),13*S,9*S,a,0,Math.PI*2);ctx.fill();ctx.stroke();ctx.restore();};
+  nail(I1,I2,-1); nail(T1,T2,1);
+  ctx.restore();
+}
 
 // ---------------------------------------------------------------- Abacus (soroban)
 // Bottom hand for the teaching demos: a fist with the thumb out, the correct sempoa gesture for pushing
@@ -592,8 +632,15 @@ class Abacus{
     this.fIndex=txt(scene,0,0,'👇',52).setAlpha(0); this.fThumb=txt(scene,0,0,'👆',52).setAlpha(0);
     this.fHand=scene.textures.exists('thumb')?scene.add.image(0,0,'thumb').setOrigin(...THUMB_ORIGIN).setAlpha(0):null;
     if(this.fHand){this.fHand.setScale(THUMB_W/(this.fHand.width||256));c.add(this.fHand);}
-    this.fPinch=scene.textures.exists('pinchHand')?scene.add.image(0,0,'pinchHand').setOrigin(0,0).setScale(1/PINCH_S).setAlpha(0):null;
-    if(this.fPinch) c.add(this.fPinch);
+    // jepit hint bubble: white rounded square + the small pinch hand
+    if(scene.textures.exists('pinchHand')){
+      const bg=scene.add.graphics(),sz=ICON_SIZE;
+      bg.fillStyle(0x24323d,.12).fillRoundedRect(-sz/2+3,-sz/2+6,sz,sz,34);
+      bg.fillStyle(0xffffff,.94).fillRoundedRect(-sz/2,-sz/2,sz,sz,34);
+      bg.lineStyle(3,0xffd23f,1).strokeRoundedRect(-sz/2,-sz/2,sz,sz,34);
+      const im=scene.add.image(0,0,'pinchHand').setScale(1/PINCH_S);
+      this.fPinch=scene.add.container(0,0,[bg,im]).setAlpha(0); c.add(this.fPinch);
+    } else this.fPinch=null;
     c.add([this.fIndex,this.fThumb]);
     this.baseGlow=(opts.glow||[]).slice();
     // "Jepit!" toast floats above the visible part of the sempoa
@@ -794,15 +841,15 @@ class Abacus{
       const up=e1>s0.e,lo=Math.min(s0.e,e1),hi=Math.max(s0.e,e1);
       b.e.slice(lo,hi).forEach((im,i)=>{this.s.tweens.killTweensOf(im);this.busy.add(im);tw.push({targets:im,y:yE(lo+i,up)});});
       if(pinchIn){
-        const low=b.e[hi-1],ct=this.s.textures.get('pinchHand');
-        const mo={slide:1,relax:0};
-        drawPinch=()=>{drawPinchHand(ct.getContext(),PINCH_S,x+PINCH_BOX.x,PINCH_BOX.y,{x,y:b.h.y},{x,y:low.y+AB.BH},mo);ct.refresh();};
+        const ct=this.s.textures.get('pinchHand'),mo={t:0};
+        drawPinch=()=>{drawPinchIcon(ct.getContext(),mo.t);ct.refresh();};
         this.pinchMo=mo;
+        // beside the rod, on the side with more room in view; level with the bar
+        const rodScreenX=this.c.x+x*this.k, onLeft=rodScreenX>this.vx0+this.viewW/2;
+        const ix=x+(onLeft?-1:1)*(AB.RW/2+ICON_SIZE/2-6), iy=AB.PAD+AB.BEAM_TOP+AB.BEAM_H/2;
         this.s.tweens.killTweensOf(this.fPinch);
-        this.fPinch.setPosition(x+PINCH_BOX.x,PINCH_BOX.y).setAlpha(0); drawPinch();
-        // the hand slides in from the side while it appears
-        this.s.tweens.add({targets:this.fPinch,alpha:1,duration:300});
-        this.s.tweens.addCounter({from:1,to:0,duration:300,ease:'Quad.Out',onUpdate:t=>{mo.slide=t.getValue();if(!this.dead)drawPinch();}});
+        this.fPinch.setPosition(ix,iy).setAlpha(0).setScale(.8); drawPinch();
+        this.s.tweens.add({targets:this.fPinch,alpha:1,scale:1,duration:280,ease:'Back.Out'});
       }
       else if(up&&this.fHand) finger(this.fHand,null,x,yE(hi-1,false)+AB.BH+1,yE(hi-1,true)+AB.BH+1);
       else if(up) finger(this.fThumb,'👆',x-10,yE(hi-1,false)+AB.BH+22,yE(hi-1,true)+AB.BH+22);
@@ -813,13 +860,13 @@ class Abacus{
     this.s.time.delayedCall(drawPinch?380:320,()=>{ if(this.dead) return;
       tw.forEach(t=>this.s.tweens.add({...t,duration:dur,ease:'Sine.InOut'}));
       // redraw the hand every frame so the fingertips follow the beads
-      if(drawPinch) this.s.tweens.addCounter({from:0,to:1,duration:dur,onUpdate:()=>{if(!this.dead)drawPinch();}});
+      // fingers close from wide apart to together, in time with the beads
+      if(drawPinch){const mo=this.pinchMo;this.s.tweens.addCounter({from:0,to:1,duration:dur,ease:'Sine.InOut',onUpdate:t=>{mo.t=t.getValue();if(!this.dead)drawPinch();}});}
       sfx.clack(); if(pinch){sfx.pinch();this.toast(L().pinch);}
       this.s.time.delayedCall(dur+60,()=>{ if(this.dead) return;
         this.state[r]={h:h1,e:e1};[b.h,...b.e].forEach(im=>this.busy.delete(im));this.update(true);sfx.clack();
-        if(drawPinch){ const mo=this.pinchMo; mo.slide=0; drawPinch();
-          this.s.tweens.add({targets:this.fPinch,alpha:0,delay:120,duration:340});
-          this.s.tweens.addCounter({from:0,to:1,delay:60,duration:420,ease:'Quad.In',onUpdate:t=>{mo.relax=t.getValue();if(!this.dead)drawPinch();}}); }
+        if(drawPinch){ this.pinchMo.t=1; drawPinch();
+          this.s.tweens.add({targets:this.fPinch,alpha:0,scale:.85,delay:260,duration:320}); }
         used.filter(f=>f!==this.fPinch).forEach(f=>this.s.tweens.add({targets:f,alpha:0,duration:260}));
         this.s.time.delayedCall(drawPinch?520:320,()=>cb&&cb());
       });
@@ -1000,7 +1047,7 @@ class Boot extends Phaser.Scene{
       shape();x.lineWidth=1.3*S;x.strokeStyle=hex(lo);x.stroke();
       ct.refresh();
     };
-    this.textures.createCanvas('pinchHand',Math.round(PINCH_BOX.w*PINCH_S),Math.round(PINCH_BOX.h*PINCH_S));
+    this.textures.createCanvas('pinchHand',Math.round(ICON_U*ICON_K*PINCH_S),Math.round(ICON_U*ICON_K*PINCH_S));
     BEAD_COLORS.forEach((c,i)=>drawBead('bead'+i,c));
     drawBead('beadBrown',BEAD_BROWN);
     const g=this.make.graphics({add:false});g.fillStyle(0xffffff,1).fillRect(0,0,14,9);g.generateTexture('conf',14,9);g.destroy();
