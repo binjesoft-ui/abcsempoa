@@ -58,7 +58,8 @@ index.html          the whole game (Phaser 3, single file)
 assets/mascot.svg   the ABC Sempoa kid mascot (vector)
 assets/mascot.png   the mascot as a PNG
 assets/thumb.png    the thumb hand used in finger demos
-assets/jepit-preview.gif  the jepit gesture hint shown for 6–9
+assets/jepit-open.png, jepit-closed.png  the jepit hint pictures (open → pinched)
+assets/jepit-preview.gif  preview of the jepit hint
 tests/              headless checks (run: node tests/test.js)
 tools/              make-challenges.js — publishes daily/weekly question files
 challenges/         published daily/ and weekly/ question sets
@@ -66,7 +67,7 @@ challenges/         published daily/ and weekly/ question sets
 
 ## Version
 
-2.4.2 — made by **Binjesoft**.
+2.5.0 — made by **Binjesoft**.
 
 ## Notes
 
